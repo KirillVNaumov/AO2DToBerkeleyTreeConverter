@@ -10,6 +10,7 @@
 #include <TH1F.h>
 #include <TH2F.h>
 
+#include <yaml-cpp/yaml.h>
 
 // Histograms for QA purposes
 TList *outputhists;
@@ -36,13 +37,10 @@ TTree *outputTree;
 
 // TODO: MC truth information
 
-#if 0
 // cuts for tree production
 YAML::Node treecuts;
 YAML::Node eventCuts;
 YAML::Node trackCuts;
-#endif
-
 
 class TFile;
 

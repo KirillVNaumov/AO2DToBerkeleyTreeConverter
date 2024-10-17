@@ -4,6 +4,9 @@ CC          := g++
 #The Target Binary Program
 TARGET      := converter
 
+#Build type
+BUILD				:= product
+
 #The Directories, Source, Includes, Objects, Binary and Resources
 SRCDIR      := src
 INCDIR      := include
@@ -21,16 +24,25 @@ INCDEP      := -I$(INCDIR)
 LIBDEP			:=
 
 # Root
-ROOT_INC	:= `root-config --incdir`
-ROOT_LIB	:= `root-config --libs --cflags`
+ROOT_INC		:= `root-config --incdir`
+ROOT_LIB		:= `root-config --libs --cflags`
 
-INC			+= -I$(ROOT_INC)
-LIBDEP	+= $(ROOT_LIB)
-LIB			+= $(ROOT_LIB)
+INC					+= -I$(ROOT_INC)
+LIBDEP			+= $(ROOT_LIB)
+LIB					+= $(ROOT_LIB)
+
+LIBDEP			+= -lyaml-cpp
+LIB		      += -lyaml-cpp
 
 #---------------------------------------------------------------------------------
 #DO NOT EDIT BELOW THIS LINE
 #---------------------------------------------------------------------------------
+
+ifeq ($(BUILD),product)
+  CFLAGS		+= -DNDEBUG
+endif
+
+
 SOURCES     := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS     := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJEXT)))
 

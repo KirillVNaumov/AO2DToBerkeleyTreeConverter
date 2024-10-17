@@ -1,9 +1,11 @@
-#include <cassert>
-#include <iostream>
 #include <TFile.h>
 #include "Converter.hpp"
+#include "debug.hpp"
 
 #include "eventbuilding.h"
+
+#include "TROOT.h"
+#include "TRint.h"
 
 // flat trees
 // event prpoperties tree
@@ -44,6 +46,7 @@ void createTree() {
   outputTree->Branch("run_number", &fBuffer_RunNumber, "RunNumber/I");
   outputTree->Branch("event_selection", &fBuffer_eventselection,
                      "eventselection/s"); // todo check format
+	outputTree->Branch("triggersel", &fBuffer_triggersel, "triggersel/l");
   outputTree->Branch("centrality", &fBuffer_centrality, "centrality/F");
   outputTree->Branch("multiplicity", &fBuffer_multiplicity, "multiplicity/F");
   // track
@@ -97,7 +100,6 @@ void writeEvents(TTree *tree, std::vector<event> &events) {
     // clear all buffers
     clearBuffers();
 
-#if 0
     if (treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
@@ -109,27 +111,23 @@ void writeEvents(TTree *tree, std::vector<event> &events) {
       if (!acc)
         continue;
     }
-#endif
 
     // fill event level properties
     fBuffer_RunNumber = (Int_t)ev.col.runNumber;
     fBuffer_eventselection = (uint16_t)ev.col.eventsel;
     fBuffer_centrality = (Float_t)ev.col.centrality;
     fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
+		fBuffer_triggersel = (uint64_t)ev.col.triggersel;
 
-#if 0
     trackCuts = treecuts["track_cuts"];
-#endif
     // fill track properties
     for (auto &tr : ev.tracks) {
-#if 0
       if (tr.pt < trackCuts["min_pt"].as<float>())
         continue;
       if (tr.eta < trackCuts["min_eta"].as<float>())
         continue;
       if (tr.eta > trackCuts["max_eta"].as<float>())
         continue;
-#endif
 
       fBuffer_track_data_eta->push_back((Float_t)tr.eta);
       fBuffer_track_data_phi->push_back((Float_t)tr.phi);
@@ -162,7 +160,6 @@ void writeEvents(TTree *tree, std::vector<event> &events) {
 }
 
 void doEventSelection(std::vector<event> &events) {
-#if 0
   // loop over events and remove them from vector if they don't fulfull a
   // certain cut possibility to do event selection if wanted
   eventCuts = treecuts["event_cuts"];
@@ -181,7 +178,6 @@ void doEventSelection(std::vector<event> &events) {
     }
   }
   return;
-#endif
 }
 
 // can be used to do analysis (if needed)
@@ -209,54 +205,32 @@ void doAnalysis(std::vector<event> &events) {
 }
 
 void Converter::processFile(TFile* file) {
-  // define all TTrees that are in the file
-  TTree *O2jclustertrack, *O2jcollision, *O2jtrack, *O2jcluster, *O2jbc;
-  // set all to nullptr
-  O2jclustertrack = nullptr;
-  O2jcollision = nullptr;
-  O2jtrack = nullptr;
-  O2jcluster = nullptr;
-  O2jbc = nullptr;
-
+  std::vector<event> events;
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;
   while ((key = (TKey *)next())) {
-#if 0
     TClass *cl = gROOT->GetClass(key->GetClassName());
-#else
-    TClass *cl = nullptr;
-#endif
     if (!cl->InheritsFrom("TDirectory"))
       continue;
     TDirectory *dir = (TDirectory *)key->ReadObj();
-    TIter next2(dir->GetListOfKeys());
-    TKey *key2;
-    while ((key2 = (TKey *)next2())) {
-#if 0
-      TClass *cl2 = gROOT->GetClass(key2->GetClassName());
-#else
-      TClass *cl2 = nullptr;
-#endif
 
-      if (!cl2->InheritsFrom("TTree"))
-        continue;
-      TTree *tree = (TTree *)key2->ReadObj();
-      if (strcmp(tree->GetName(), "O2jclustertrack") == 0) {
-        O2jclustertrack = tree;
-      } else if (strcmp(tree->GetName(), "O2jcollision") == 0) {
-        O2jcollision = tree;
-      } else if (strcmp(tree->GetName(), "O2jtrack") == 0) {
-        O2jtrack = tree;
-      } else if (strcmp(tree->GetName(), "O2jcluster") == 0) {
-        O2jcluster = tree;
-      } else if (strcmp(tree->GetName(), "O2jbc") == 0) {
-        O2jbc = tree;
-      }
-  }
+		TTree *O2jclustertrack = (TTree*)dir->Get("O2jclustertrack");
+		assert(O2jclustertrack);
+    TTree *O2jcollision = (TTree*)dir->Get("O2jcollision");
+    assert(O2jcollision);
+    TTree *O2jtrack = (TTree*)dir->Get("O2jtrack");
+		assert(O2jtrack);
+    TTree *O2jcluster = (TTree*)dir->Get("O2jcluster");
+		assert(O2jcluster);
+    TTree *O2jbc = (TTree*)dir->Get("O2jbc");
+		assert(O2jbc);
+
     // build event
-    std::vector<event> events =
+    events =
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
+
+		DEBUG("Event size:" << events.size())
 
     // do event selection
     doEventSelection(events);
@@ -267,26 +241,43 @@ void Converter::processFile(TFile* file) {
     // write events to TTree
     writeEvents(outputTree, events);
 
-    // delete all TTrees
-    delete O2jclustertrack;
-    delete O2jcollision;
-    delete O2jtrack;
-    delete O2jcluster;
-
     // delete all events
     events.clear();
   }
 }
 
+int main(int args, char **argv) {
 
-
-int main() {
   try {
     TFile *outFile = new TFile("output.root", "RECREATE");
-    Converter c;
-    TFile *file = new TFile("AO2D.root");
-    c.processFile(file);
+
+    createQAHistos();
+    createTree();
+
+    // loop over all files in txt file fileList
+    std::vector<TString> fileList = { "./AODFiles/001/AO2D.root" };
+
+#if 0
+    std::ifstream file("AODFiles");
+    std::string str;
+    while (std::getline(file, str)) {
+      fileList.push_back(str);
+    }
+#endif
+
+    for (Int_t i = 0; i < fileList.size(); i++) {
+      TString filePath = fileList.at(i);
+      std::cout << "-> Processing file " << filePath << std::endl;
+      TFile *in = new TFile(filePath.Data());
+      Converter c;
+      c.processFile(in);
+      in->Close();
+    }
+
     outFile->cd();
+    // LOOP OVER OUTput hists and write to file
+    outputhists->Write();
+    outputTree->Write();
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
   }

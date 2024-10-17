@@ -1,13 +1,14 @@
-
-
 #ifndef _eventbuilding_h_included
 #define _eventbuilding_h_included
+
+#include "debug.hpp"
 
 // event level properties
 Int_t fBuffer_RunNumber;
 Float_t fBuffer_centrality;
 Float_t fBuffer_multiplicity;
 uint16_t fBuffer_eventselection;
+uint64_t fBuffer_triggersel;
 // track
 std::vector<Float_t> *fBuffer_track_data_eta;
 std::vector<Float_t> *fBuffer_track_data_phi;
@@ -73,6 +74,7 @@ struct collision {
   Float_t multiplicity;
   Float_t centrality;
   uint16_t eventsel; // this should be a uint16_t
+	uint64_t triggersel;
 };
 
 // create event class which contains collision and vector or tracks and clusters
@@ -155,6 +157,10 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                             ->GetValue();
     ev.col.eventsel =
         collisions->GetBranch("fEventSel")->GetLeaf("fEventSel")->GetValue();
+
+    ev.col.triggersel = collisions->GetBranch("fTriggerSel")
+                            ->GetLeaf("fTriggerSel")
+                            ->GetValue();
 
     // std::cout << "Number of tracks: " << trackMap[i].size() << std::endl;
 
