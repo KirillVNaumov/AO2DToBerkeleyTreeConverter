@@ -95,8 +95,7 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // print track table
   //   clusters->Print();
   // loop over collision
-  //   std::cout << "-> Looping over " << collisions->GetEntries() << " collisions"
-  //   << std::endl;
+	DEBUG("-> Looping over " << collisions->GetEntries() << " collisions")
 
   // before loop over collision, create a map of tracks and collisionID
   std::unordered_map<int, std::vector<int>> trackMap; // fill once to figure out which entries from the tree we need
@@ -162,7 +161,7 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                             ->GetLeaf("fTriggerSel")
                             ->GetValue();
 
-    // std::cout << "Number of tracks: " << trackMap[i].size() << std::endl;
+    DEBUG("Number of tracks: " << trackMap[i].size())
 
     // loop over map to find right indeces
     for (int j = 0; j < trackMap[i].size(); j++) {

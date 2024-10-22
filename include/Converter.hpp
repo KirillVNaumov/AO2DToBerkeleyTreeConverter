@@ -12,57 +12,96 @@
 
 #include <yaml-cpp/yaml.h>
 
-// Histograms for QA purposes
-TList *outputhists;
-
-TH1F *hTrackPt;
-TH1F *hClusterEnergy;
-TH1F *hClusterEta;
-TH1F *hClusterPhi;
-TH1F *hNEvents;
-TH1F *hEvtVtxX;
-TH1F *hEvtVtxY;
-TH1F *hEvtVtxZ;
-
-TH2F *hClusterM02vsE;
+#define HISTOGRAMS_DO(defH1, defH2) 																\
+	/* TH1F */																												\
+	defH1(hTrackPt, 			"Track p_{T}", 			100,	0, 		100)				\
+  defH1(hClusterEnergy, "Cluster Energy", 	100,	0, 		100)				\
+  defH1(hClusterEta, 		"Cluster #eta", 		100,	-1, 	1)					\
+  defH1(hClusterPhi, 		"Cluster #phi", 		100,	0, 		2 * 3.14)		\
+  defH1(hNEvents, 			"Number of events",	2, 		0, 		2)					\
+  defH1(hEvtVtxX, 			"Event vertex x", 	100,	 -10,	10)					\
+  defH1(hEvtVtxY, 			"Event vertex y", 	100, 	-10, 	10)					\
+  defH1(hEvtVtxZ, 			"Event vertex z", 	100, 	-10,	10)					\
+  /* TH2F */																												\
+	defH2(hClusterM02vsE, "Cluster M02 vs E", 300, 0, 3, 100, 0, 100)
 
 // define global switches
 Bool_t fIsPbPb = kFALSE;
 Bool_t fIsMC = kFALSE;
 
-//----
-// define output tree
-//----
-TTree *outputTree;
-
 // TODO: MC truth information
-
-// cuts for tree production
-YAML::Node treecuts;
-YAML::Node eventCuts;
-YAML::Node trackCuts;
 
 class TFile;
 
+class event;
+
 class Converter {
-#if 0
-      hTrackPt = new TH1F("hTrackPt", "Track p_{T}", 100, 0, 100);
-  hClusterEnergy = new TH1F("hClusterEnergy", "Cluster Energy", 100, 0, 100);
-  hClusterEta = new TH1F("hClusterEta", "Cluster #eta", 100, -1, 1);
-  hClusterPhi =
-      new TH1F("hClusterPhi", "Cluster #phi", 100, 0, 2 * TMath::Pi());
-  hNEvents = new TH1F("hNEvents", "Number of events", 2, 0, 2);
-  hEvtVtxX = new TH1F("hEvtVtxX", "Event vertex x", 100, -10, 10);
-  hEvtVtxY = new TH1F("hEvtVtxY", "Event vertex y", 100, -10, 10);
-  hEvtVtxZ = new TH1F("hEvtVtxZ", "Event vertex z", 100, -10, 10);
 
-  hClusterM02vsE =
-      new TH2F("hClusterM02vsE", "Cluster M02 vs E", 300, 0, 3, 100, 0, 100);
-#endif
+#define DECLARE_HISTOGRAMS(name, title, nbins, xlop, xup) \
+	TH1F *name;
 
+#undef DECLARE_HISTOGRAMS
+
+	TFile *outFile = new TFile("output.root", "RECREATE");
+
+	// Histograms for QA purposes
+	TList *outputhists;
+
+	TTree *outputTree;
+
+	TH1F *hTrackPt;
+	TH1F *hClusterEnergy;
+	TH1F *hClusterEta;
+	TH1F *hClusterPhi;
+	TH1F *hNEvents;
+	TH1F *hEvtVtxX;
+	TH1F *hEvtVtxY;
+	TH1F *hEvtVtxZ;
+
+	TH2F *hClusterM02vsE;
+
+	// cuts for tree production
+	YAML::Node treecuts;
+	YAML::Node eventCuts;
+	YAML::Node trackCuts;
+
+	void createQAHistos();
+	void createTree();
+
+	void writeEvents(TTree *tree, std::vector<event> &events);
+
+	void doEventSelection(std::vector<event> &events);
+
+	void doAnalysis(std::vector<event> &events);
+
+	void clearBuffers();
+
+	bool _createHistograms;
 
 public:
-    void processFile(TFile *file);
+	void processFile(TFile *file);
+
+	Converter(TString outputFileName,
+            TString configFile,
+						bool createHistograms) : _createHistograms(createHistograms) {
+		outFile = new TFile(outputFileName.Data(), "RECREATE");
+
+		treecuts = YAML::LoadFile(configFile.Data());
+
+		if (_createHistograms) {
+			createQAHistos();
+		}
+		createTree();
+	}
+
+	~Converter() {
+    outFile->cd();
+    // LOOP OVER OUTput hists and write to file
+    outputTree->Write();
+    if (_createHistograms) {
+	    outputhists->Write();
+		}
+	}
 
 };
 

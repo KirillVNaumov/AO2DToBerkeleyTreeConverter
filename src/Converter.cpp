@@ -15,7 +15,7 @@
 // they all have event index and then group by operations to get events and
 // iterate accordingly
 
-void createQAHistos() {
+void Converter::createQAHistos() {
   hTrackPt = new TH1F("hTrackPt", "Track p_{T}", 100, 0, 100);
   hClusterEnergy = new TH1F("hClusterEnergy", "Cluster Energy", 100, 0, 100);
   hClusterEta = new TH1F("hClusterEta", "Cluster #eta", 100, -1, 1);
@@ -41,7 +41,8 @@ void createQAHistos() {
   outputhists->Add(hEvtVtxZ);
   outputhists->Add(hClusterM02vsE);
 }
-void createTree() {
+
+void Converter::createTree() {
   outputTree = new TTree("eventTree", "eventTree");
   outputTree->Branch("run_number", &fBuffer_RunNumber, "RunNumber/I");
   outputTree->Branch("event_selection", &fBuffer_eventselection,
@@ -73,7 +74,7 @@ void createTree() {
                      &fBuffer_cluster_data_matchedTrackIndex);
 }
 
-void clearBuffers() {
+void Converter::clearBuffers() {
   fBuffer_track_data_eta->clear();
   fBuffer_track_data_phi->clear();
   fBuffer_track_data_pt->clear();
@@ -95,7 +96,7 @@ void clearBuffers() {
 }
 
 // write events to TTree
-void writeEvents(TTree *tree, std::vector<event> &events) {
+void Converter::writeEvents(TTree *tree, std::vector<event> &events) {
   for (auto &ev : events) {
     // clear all buffers
     clearBuffers();
@@ -159,7 +160,7 @@ void writeEvents(TTree *tree, std::vector<event> &events) {
   }
 }
 
-void doEventSelection(std::vector<event> &events) {
+void Converter::doEventSelection(std::vector<event> &events) {
   // loop over events and remove them from vector if they don't fulfull a
   // certain cut possibility to do event selection if wanted
   eventCuts = treecuts["event_cuts"];
@@ -181,18 +182,24 @@ void doEventSelection(std::vector<event> &events) {
 }
 
 // can be used to do analysis (if needed)
-void doAnalysis(std::vector<event> &events) {
+void Converter::doAnalysis(std::vector<event> &events) {
+	assert(_createHistograms);
+  DEBUG("\t1.1")
   for (auto &ev : events) {
+	  DEBUG("\t1.2")
     hNEvents->Fill(1);
+    DEBUG("\t1.3")
     hEvtVtxX->Fill(ev.col.posx);
     hEvtVtxY->Fill(ev.col.posy);
     hEvtVtxZ->Fill(ev.col.posz);
 
+    DEBUG("\t1.4")
     // plot pt of all tracks
     for (auto &tr : ev.tracks) {
       hTrackPt->Fill(tr.pt);
     }
 
+    DEBUG("\t1.5")
     // plot energy, eta and phi of all clusters
     for (auto &cl : ev.clusters) {
       hClusterEnergy->Fill(cl.energy);
@@ -209,12 +216,14 @@ void Converter::processFile(TFile* file) {
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;
+	DEBUG("1")
   while ((key = (TKey *)next())) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
       continue;
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
+	  DEBUG("2")
 		TTree *O2jclustertrack = (TTree*)dir->Get("O2jclustertrack");
 		assert(O2jclustertrack);
     TTree *O2jcollision = (TTree*)dir->Get("O2jcollision");
@@ -226,21 +235,26 @@ void Converter::processFile(TFile* file) {
     TTree *O2jbc = (TTree*)dir->Get("O2jbc");
 		assert(O2jbc);
 
+    DEBUG("3")
     // build event
     events =
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
 
+    DEBUG("4")
 		DEBUG("Event size:" << events.size())
 
     // do event selection
     doEventSelection(events);
 
-    // loop over events
-    doAnalysis(events);
+    DEBUG("5")
+		if (_createHistograms)
+	    doAnalysis(events);
 
+    DEBUG("6")
     // write events to TTree
     writeEvents(outputTree, events);
 
+    DEBUG("7")
     // delete all events
     events.clear();
   }
@@ -249,35 +263,18 @@ void Converter::processFile(TFile* file) {
 int main(int args, char **argv) {
 
   try {
-    TFile *outFile = new TFile("output.root", "RECREATE");
-
-    createQAHistos();
-    createTree();
-
+    Converter c("output.root", "treeCuts.yaml", /*createHistograms*/false);
     // loop over all files in txt file fileList
     std::vector<TString> fileList = { "./AODFiles/001/AO2D.root" };
-
-#if 0
-    std::ifstream file("AODFiles");
-    std::string str;
-    while (std::getline(file, str)) {
-      fileList.push_back(str);
-    }
-#endif
 
     for (Int_t i = 0; i < fileList.size(); i++) {
       TString filePath = fileList.at(i);
       std::cout << "-> Processing file " << filePath << std::endl;
       TFile *in = new TFile(filePath.Data());
-      Converter c;
       c.processFile(in);
       in->Close();
     }
 
-    outFile->cd();
-    // LOOP OVER OUTput hists and write to file
-    outputhists->Write();
-    outputTree->Write();
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
   }
