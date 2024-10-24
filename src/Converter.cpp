@@ -184,22 +184,17 @@ void Converter::doEventSelection(std::vector<event> &events) {
 // can be used to do analysis (if needed)
 void Converter::doAnalysis(std::vector<event> &events) {
 	assert(_createHistograms);
-  DEBUG("\t1.1")
   for (auto &ev : events) {
-	  DEBUG("\t1.2")
     hNEvents->Fill(1);
-    DEBUG("\t1.3")
     hEvtVtxX->Fill(ev.col.posx);
     hEvtVtxY->Fill(ev.col.posy);
     hEvtVtxZ->Fill(ev.col.posz);
 
-    DEBUG("\t1.4")
     // plot pt of all tracks
     for (auto &tr : ev.tracks) {
       hTrackPt->Fill(tr.pt);
     }
 
-    DEBUG("\t1.5")
     // plot energy, eta and phi of all clusters
     for (auto &cl : ev.clusters) {
       hClusterEnergy->Fill(cl.energy);
@@ -216,14 +211,12 @@ void Converter::processFile(TFile* file) {
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;
-	DEBUG("1")
   while ((key = (TKey *)next())) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
       continue;
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
-	  DEBUG("2")
 		TTree *O2jclustertrack = (TTree*)dir->Get("O2jclustertrack");
 		assert(O2jclustertrack);
     TTree *O2jcollision = (TTree*)dir->Get("O2jcollision");
@@ -235,48 +228,22 @@ void Converter::processFile(TFile* file) {
     TTree *O2jbc = (TTree*)dir->Get("O2jbc");
 		assert(O2jbc);
 
-    DEBUG("3")
     // build event
     events =
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
 
-    DEBUG("4")
 		DEBUG("Event size:" << events.size())
 
     // do event selection
     doEventSelection(events);
 
-    DEBUG("5")
 		if (_createHistograms)
 	    doAnalysis(events);
 
-    DEBUG("6")
     // write events to TTree
     writeEvents(outputTree, events);
 
-    DEBUG("7")
     // delete all events
     events.clear();
   }
-}
-
-int main(int args, char **argv) {
-
-  try {
-    Converter c("output.root", "treeCuts.yaml", /*createHistograms*/false);
-    // loop over all files in txt file fileList
-    std::vector<TString> fileList = { "./AODFiles/001/AO2D.root" };
-
-    for (Int_t i = 0; i < fileList.size(); i++) {
-      TString filePath = fileList.at(i);
-      std::cout << "-> Processing file " << filePath << std::endl;
-      TFile *in = new TFile(filePath.Data());
-      c.processFile(in);
-      in->Close();
-    }
-
-  } catch (int code) {
-    std::cout << "Exception caught: " << code << std::endl;
-  }
-  return 1;
 }

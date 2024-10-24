@@ -1,0 +1,13 @@
+# Event cuts
+event_cuts:
+  z_vtx_cut: 10
+  mult_min: 0
+  mult_max: 999999
+  min_clus_E: 0.
+track_cuts:
+  min_pt: 0.150
+  min_eta: -2
+  max_eta: 2
+  track_sel:
+cluster_cuts:
+  min_E: 0.

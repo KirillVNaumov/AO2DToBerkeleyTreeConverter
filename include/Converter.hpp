@@ -25,10 +25,6 @@
   /* TH2F */																												\
 	defH2(hClusterM02vsE, "Cluster M02 vs E", 300, 0, 3, 100, 0, 100)
 
-// define global switches
-Bool_t fIsPbPb = kFALSE;
-Bool_t fIsMC = kFALSE;
-
 // TODO: MC truth information
 
 class TFile;
@@ -42,7 +38,7 @@ class Converter {
 
 #undef DECLARE_HISTOGRAMS
 
-	TFile *outFile = new TFile("output.root", "RECREATE");
+	TFile *outFile;
 
 	// Histograms for QA purposes
 	TList *outputhists;
@@ -77,6 +73,10 @@ class Converter {
 	void clearBuffers();
 
 	bool _createHistograms;
+
+	// define global switches
+	bool fIsPbPb = false;
+	bool fIsMC = false;
 
 public:
 	void processFile(TFile *file);
