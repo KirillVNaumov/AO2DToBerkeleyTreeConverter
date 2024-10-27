@@ -3,6 +3,8 @@
 
 #include "debug.hpp"
 
+#include <unordered_map>
+
 // event level properties
 Int_t fBuffer_RunNumber;
 Float_t fBuffer_centrality;
