@@ -1,6 +1,5 @@
 #include <TFile.h>
 #include "Converter.hpp"
-#include "debug.hpp"
 
 #include "eventbuilding.h"
 
