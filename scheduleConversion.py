@@ -31,6 +31,10 @@ if __name__ == "__main__":
     parser.add_argument("--config", help="The config file to use", default="treeCutsBerkeley.yaml")
     args = parser.parse_args()
 
+		if not args.input:
+			log.error(f"Input directory was not provided")
+			sys.exit(1)
+
     input_dir = Path(args.input)
     output_dir = args.output
     configfile = args.config
