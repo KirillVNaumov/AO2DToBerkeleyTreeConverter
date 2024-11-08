@@ -94,7 +94,7 @@ void Converter::clearBuffers() {
 }
 
 // write events to TTree
-void Converter::writeEvents(TTree *tree, std::vector<event> &events) {
+void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
   for (auto &ev : events) {
     // clear all buffers
     clearBuffers();
@@ -158,13 +158,13 @@ void Converter::writeEvents(TTree *tree, std::vector<event> &events) {
   }
 }
 
-void Converter::doEventSelection(std::vector<event> &events) {
+void Converter::doEventSelection(std::vector<Event> &events) {
   // loop over events and remove them from vector if they don't fulfull a
   // certain cut possibility to do event selection if wanted
   eventCuts = treecuts["event_cuts"];
 
   // loop over event vector and erase if not fulfilling cuts
-  std::vector<event>::iterator it = events.begin();
+  std::vector<Event>::iterator it = events.begin();
   while (it != events.end()) {
     if (TMath::Abs(it->col.posz) > eventCuts["z_vtx_cut"].as<float>()) {
       it = events.erase(it);
@@ -180,7 +180,7 @@ void Converter::doEventSelection(std::vector<event> &events) {
 }
 
 // can be used to do analysis (if needed)
-void Converter::doAnalysis(std::vector<event> &events) {
+void Converter::doAnalysis(std::vector<Event> &events) {
   assert(_createHistograms);
   for (auto &ev : events) {
     hNEvents->Fill(1);
@@ -205,7 +205,7 @@ void Converter::doAnalysis(std::vector<event> &events) {
 }
 
 void Converter::processFile(TFile *file) {
-  std::vector<event> events;
+  std::vector<Event> events;
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;

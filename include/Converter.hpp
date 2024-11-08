@@ -29,7 +29,7 @@
 
 class TFile;
 
-class event;
+class Event;
 
 class Converter {
 
@@ -63,11 +63,11 @@ class Converter {
   void createQAHistos();
   void createTree();
 
-  void writeEvents(TTree *tree, std::vector<event> &events);
+  void writeEvents(TTree *tree, std::vector<Event> &events);
 
-  void doEventSelection(std::vector<event> &events);
+  void doEventSelection(std::vector<Event> &events);
 
-  void doAnalysis(std::vector<event> &events);
+  void doAnalysis(std::vector<Event> &events);
 
   void clearBuffers();
 
