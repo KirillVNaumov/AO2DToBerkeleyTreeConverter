@@ -76,7 +76,7 @@ struct collision {
   Float_t multiplicity;
   Float_t centrality;
   uint16_t eventsel; // this should be a uint16_t
-	uint64_t triggersel;
+  uint64_t triggersel;
 };
 
 // create event class which contains collision and vector or tracks and clusters
@@ -97,10 +97,11 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // print track table
   //   clusters->Print();
   // loop over collision
-	DEBUG("-> Looping over " << collisions->GetEntries() << " collisions")
+  DEBUG("-> Looping over " << collisions->GetEntries() << " collisions")
 
   // before loop over collision, create a map of tracks and collisionID
-  std::unordered_map<int, std::vector<int>> trackMap; // fill once to figure out which entries from the tree we need
+  std::unordered_map<int, std::vector<int>>
+      trackMap; // fill once to figure out which entries from the tree we need
                 // for a given
 
   // build map of clusters
@@ -119,7 +120,6 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                             ->GetLeaf("fIndexJCollisions")
                             ->GetValue();
       trackMap[collisionID].push_back(j);
-
     }
   } else {
     std::cout << "->Tracks is not found: skipping" << std::endl;
@@ -133,12 +133,10 @@ std::vector<event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                             ->GetLeaf("fIndexJCollisions")
                             ->GetValue();
       clusterMap[collisionID].push_back(j);
-
     }
   } else {
     std::cout << "->Clusters is not found: skipping" << std::endl;
   }
-
 
   for (int i = 0; i < collisions->GetEntries(); i++) {
     collisions->GetEntry(i);

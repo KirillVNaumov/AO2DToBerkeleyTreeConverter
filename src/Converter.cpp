@@ -1,5 +1,5 @@
-#include <TFile.h>
 #include "Converter.hpp"
+#include <TFile.h>
 
 #include "eventbuilding.h"
 
@@ -18,8 +18,8 @@ void Converter::createQAHistos() {
   hTrackPt = new TH1F("hTrackPt", "Track p_{T}", 100, 0, 100);
   hClusterEnergy = new TH1F("hClusterEnergy", "Cluster Energy", 100, 0, 100);
   hClusterEta = new TH1F("hClusterEta", "Cluster #eta", 100, -1, 1);
-  hClusterPhi =
-      new TH1F("hClusterPhi", "Cluster #phi", 100, 0, 2 * /* TMath::Pi()*/ 3.14);
+  hClusterPhi = new TH1F("hClusterPhi", "Cluster #phi", 100, 0,
+                         2 * /* TMath::Pi()*/ 3.14);
   hNEvents = new TH1F("hNEvents", "Number of events", 2, 0, 2);
   hEvtVtxX = new TH1F("hEvtVtxX", "Event vertex x", 100, -10, 10);
   hEvtVtxY = new TH1F("hEvtVtxY", "Event vertex y", 100, -10, 10);
@@ -46,7 +46,7 @@ void Converter::createTree() {
   outputTree->Branch("run_number", &fBuffer_RunNumber, "RunNumber/I");
   outputTree->Branch("event_selection", &fBuffer_eventselection,
                      "eventselection/s"); // todo check format
-	outputTree->Branch("triggersel", &fBuffer_triggersel, "triggersel/l");
+  outputTree->Branch("triggersel", &fBuffer_triggersel, "triggersel/l");
   outputTree->Branch("centrality", &fBuffer_centrality, "centrality/F");
   outputTree->Branch("multiplicity", &fBuffer_multiplicity, "multiplicity/F");
   // track
@@ -117,7 +117,7 @@ void Converter::writeEvents(TTree *tree, std::vector<event> &events) {
     fBuffer_eventselection = (uint16_t)ev.col.eventsel;
     fBuffer_centrality = (Float_t)ev.col.centrality;
     fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
-		fBuffer_triggersel = (uint64_t)ev.col.triggersel;
+    fBuffer_triggersel = (uint64_t)ev.col.triggersel;
 
     trackCuts = treecuts["track_cuts"];
     // fill track properties
@@ -182,7 +182,7 @@ void Converter::doEventSelection(std::vector<event> &events) {
 
 // can be used to do analysis (if needed)
 void Converter::doAnalysis(std::vector<event> &events) {
-	assert(_createHistograms);
+  assert(_createHistograms);
   for (auto &ev : events) {
     hNEvents->Fill(1);
     hEvtVtxX->Fill(ev.col.posx);
@@ -205,7 +205,7 @@ void Converter::doAnalysis(std::vector<event> &events) {
   }
 }
 
-void Converter::processFile(TFile* file) {
+void Converter::processFile(TFile *file) {
   std::vector<event> events;
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
@@ -216,28 +216,28 @@ void Converter::processFile(TFile* file) {
       continue;
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
-		TTree *O2jclustertrack = (TTree*)dir->Get("O2jclustertrack");
-		assert(O2jclustertrack);
-    TTree *O2jcollision = (TTree*)dir->Get("O2jcollision");
+    TTree *O2jclustertrack = (TTree *)dir->Get("O2jclustertrack");
+    assert(O2jclustertrack);
+    TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     assert(O2jcollision);
-    TTree *O2jtrack = (TTree*)dir->Get("O2jtrack");
-		assert(O2jtrack);
-    TTree *O2jcluster = (TTree*)dir->Get("O2jcluster");
-		assert(O2jcluster);
-    TTree *O2jbc = (TTree*)dir->Get("O2jbc");
-		assert(O2jbc);
+    TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
+    assert(O2jtrack);
+    TTree *O2jcluster = (TTree *)dir->Get("O2jcluster");
+    assert(O2jcluster);
+    TTree *O2jbc = (TTree *)dir->Get("O2jbc");
+    assert(O2jbc);
 
     // build event
     events =
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
 
-		DEBUG("Event size:" << events.size())
+    DEBUG("Event size:" << events.size())
 
     // do event selection
     doEventSelection(events);
 
-		if (_createHistograms)
-	    doAnalysis(events);
+    if (_createHistograms)
+      doAnalysis(events);
 
     // write events to TTree
     writeEvents(outputTree, events);
