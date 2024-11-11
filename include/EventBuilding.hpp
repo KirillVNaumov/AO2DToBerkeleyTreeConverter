@@ -116,7 +116,6 @@ struct Collision {
   uint64_t triggersel;
 
   void build(TTree *tree) {
-    GetLeafValue(tree, "fRunNumber", runNumber);
     // fill collision
     GetLeafValue(tree, "fPosX", posx);
     GetLeafValue(tree, "fPosY", posy);
@@ -188,7 +187,8 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   for (int i = 0; i < collisions->GetEntries(); i++) {
     collisions->GetEntry(i);
     Event ev;
-    ev.col.build(bc);
+    GetLeafValue(bc, "fRunNumber", ev.col.runNumber);
+    ev.col.build(collisions);
 
     DEBUG("Number of tracks: " << trackMap[i].size())
     // loop over map to find right indeces
