@@ -206,6 +206,7 @@ void Converter::doAnalysis(std::vector<Event> &events) {
 
 void Converter::processFile(TFile *file) {
   std::vector<Event> events;
+  int totalNumberOfEvents = 0;
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;
@@ -231,6 +232,7 @@ void Converter::processFile(TFile *file) {
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
 
     DEBUG("Event size:" << events.size())
+    totalNumberOfEvents += events.size();
 
     // do event selection
     doEventSelection(events);
@@ -244,4 +246,5 @@ void Converter::processFile(TFile *file) {
     // delete all events
     events.clear();
   }
+  std::cout << "Total number of events: " << totalNumberOfEvents << std::endl;
 }
