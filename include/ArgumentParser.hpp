@@ -19,12 +19,12 @@ public:
 
   void displayHelp() {
     std::cout << "./converter [args]" << std::endl;
-    std::cout << "\t--inputFileList=<file>, -i <file>  : " << std::endl;
-    std::cout << "\t--outputFileName=<file>, -o <file> : " << std::endl;
-    std::cout << "\t--configFile=<file>, -c <file>     : " << std::endl;
-    std::cout << "\t--createHistograms                 : " << std::endl;
-    std::cout << "\t--isPbPb                           : " << std::endl;
-    std::cout << "\t--isMC                             : " << std::endl;
+    std::cout << "\t--inputFileList=<file>, -i <file>  : input ROOT file in the AO2D format" << std::endl;
+    std::cout << "\t--outputFileName=<file>, -o <file> : output ROOT file in the BerkeleyTree format (default: \"AOD.root\")" << std::endl;
+    std::cout << "\t--configFile=<file>, -c <file>     : YAML files with cuts to be done to the converted data (default: \"treeCuts.yaml\")" << std::endl;
+    std::cout << "\t--createHistograms                 : Create histograms from the converted data" << std::endl;
+    std::cout << "\t--isPbPb                           : The data is from PbPb runs" << std::endl;
+    std::cout << "\t--isMC                             : The data is produced from Monte Carlo Simulation" << std::endl;
   }
 
   void reportError(std::string error) {
@@ -77,6 +77,7 @@ public:
         isMC = true;
       } else if (!arg.compare("-h") || !arg.compare("--help")) {
         displayHelp();
+        exit(1);
       } else {
         reportError("Unknown argument: " + arg);
       }
