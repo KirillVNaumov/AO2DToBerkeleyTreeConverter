@@ -21,7 +21,7 @@ void convertAO2DtoAOD(TString inputFileList = "",
 
   Converter c(outputFileName.Data(), configFile.Data(), createHistograms);
 
-  for (Int_t i = 0; i < fileList.size(); i++) {
+  for (size_t i = 0; i < fileList.size(); i++) {
     TString filePath = fileList.at(i);
     std::cout << "-> Processing file " << filePath << std::endl;
     TFile *in = new TFile(filePath.Data());

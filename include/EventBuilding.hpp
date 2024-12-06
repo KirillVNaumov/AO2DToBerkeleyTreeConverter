@@ -192,7 +192,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
 
     DEBUG("Number of tracks: " << trackMap[i].size())
     // loop over map to find right indeces
-    for (int j = 0; j < trackMap[i].size(); j++) {
+    for (size_t j = 0; j < trackMap[i].size(); j++) {
       tracks->GetEntry(trackMap[i].at(j));
       int collisionID;
       GetLeafValue(tracks, "fIndexJCollisions", collisionID);
@@ -205,7 +205,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
 
     DEBUG("Number of clusters: " << clusterMap[i].size())
     // loop over clusters and find those that belong to the current collision
-    for (int c = 0; c < clusterMap[i].size(); c++) {
+    for (size_t c = 0; c < clusterMap[i].size(); c++) {
       clusters->GetEntry(clusterMap[i].at(c));
       int collisionID;
       GetLeafValue(tracks, "fIndexJCollisions", collisionID);
