@@ -1,6 +1,6 @@
 export HYPERLOOP_TXT="../hyperloop_list.txt"
 export HYPERLOOP_DATA_DIR="../AO2Ds"
-export OUTPUT_DIR="../AODs"
+export OUTPUT_DIR="../BerkeleyTrees"
 
 export CONVERTER_PATH="$(dirname -- $(realpath $0))/../"
 
