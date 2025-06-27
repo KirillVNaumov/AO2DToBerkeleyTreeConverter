@@ -45,5 +45,5 @@ int main(int argc, char **argv) {
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
   }
-  return 1;
+  return 0;
 }

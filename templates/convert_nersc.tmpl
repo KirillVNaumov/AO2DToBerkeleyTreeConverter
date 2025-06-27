@@ -1,0 +1,63 @@
+#!/usr/bin/bash
+
+#SBATCH --qos=shared
+#SBATCH --constraint=cpu
+#SBATCH --account=alice
+#SBATCH --job-name=conversion
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
+#SBATCH --time=24:00:00
+#SBATCH --array=1-{{NJOBS}}
+#SBATCH --image=tch285/o2alma:latest
+#SBATCH --output={{SLURM_OUT}}/slurm-%A_%a.out
+{{NOTIFY_OPTS}}
+
+config_file={{CONFIG}}
+
+if [ -z "$SLURM_SUBMIT_DIR" ]; then
+  echo "Running in test mode."
+  shifter_cmd="shifter --image=tch285/o2alma:latest"
+  # SLURM_ARRAY_JOB_ID=test # for testing only
+  SLURM_ARRAY_TASK_ID=1 # for testing only
+else
+  echo "Running in sbatch mode."
+  shifter_cmd="shifter"
+fi
+
+FILELIST={{INPUT_FILELIST}}
+NFILES=$(wc -l < $FILELIST)
+NJOBS={{NJOBS}}
+NFILES_PER_TREE={{NFILES_PER_TREE}}
+echo "Total number of AO2Ds to convert: ${NFILES}"
+echo "Total number of jobs/trees: $NJOBS"
+echo "Number of AO2Ds per converted tree: $NFILES_PER_TREE"
+
+stop=$(( SLURM_ARRAY_TASK_ID * NFILES_PER_TREE ))
+start=$(( stop - $(( NFILES_PER_TREE - 1 )) ))
+
+if (( stop > NFILES ))
+then
+  stop=$NFILES
+fi
+
+echo "Start=$start"
+echo "Stop=$stop"
+echo "Files to be converted:"
+input_txt={{SLURM_OUT}}/input_$SLURM_ARRAY_TASK_ID.txt
+mkdir -p "{{OUTPUT}}/$SLURM_ARRAY_TASK_ID/"
+output_file={{OUTPUT}}/$SLURM_ARRAY_TASK_ID/{{TREE_NAME}}
+
+for (( file_idx = start; file_idx <= stop; file_idx++ )); do
+  input_file=$(sed -n "${file_idx}p" $FILELIST)
+  echo "  $input_file"
+  echo "$input_file" >> "$input_txt"
+done
+
+
+cmd="$shifter_cmd --module=cvmfs \
+    /cvmfs/alice.cern.ch/bin/alienv setenv JAliEn-ROOT/0.7.14-43 -c \
+    {{CONVERTER_PATH}} \
+      -i $input_txt -o $output_file -c $config_file"
+echo "Conversion command: $cmd"
+$cmd
+ecode=$?
+echo "Conversion ended with code $ecode."

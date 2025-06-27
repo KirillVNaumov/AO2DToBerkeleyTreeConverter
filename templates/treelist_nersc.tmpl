@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+
+#SBATCH --qos=shared
+#SBATCH --constraint=cpu
+#SBATCH --account=alice
+#SBATCH --job-name=makelist
+#SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
+#SBATCH --time=00:30:00
+#SBATCH --output={{SLURM_OUT}}/slurm-treelist-%A.out
+
+
+find {{OUTPUT}} \
+    -type f -name {{TREE_NAME}} \
+    > {{TREE_LIST}}

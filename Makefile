@@ -5,7 +5,7 @@ CC          := g++
 TARGET      := converter
 
 #Build type
-BUILD				:= product
+BUILD       := product
 
 #The Directories, Source, Includes, Objects, Binary and Resources
 SRCDIR      := src
@@ -21,58 +21,57 @@ CFLAGS      := -Wall -O3 -g -std=c++17
 LIB         := -lm
 INC         := -I$(INCDIR) -I/usr/local/include
 INCDEP      := -I$(INCDIR)
-LIBDEP			:=
+LIBDEP      :=
 
 # Root
-ROOT_INC		:= `root-config --incdir`
-ROOT_LIB		:= `root-config --libs --cflags`
+ROOT_INC    := `root-config --incdir`
+ROOT_LIB    := `root-config --libs --cflags`
 
-INC					+= -I$(ROOT_INC)
-LIBDEP			+= $(ROOT_LIB)
-LIB					+= $(ROOT_LIB)
+INC         += -I$(ROOT_INC)
+LIBDEP      += $(ROOT_LIB)
+LIB         += $(ROOT_LIB)
 
-LIBDEP			+= -lyaml-cpp
-LIB		      += -lyaml-cpp
+LIBDEP      += -lyaml-cpp
+LIB         += -lyaml-cpp
 
 #---------------------------------------------------------------------------------
-#DO NOT EDIT BELOW THIS LINE
+# DO NOT EDIT BELOW THIS LINE
 #---------------------------------------------------------------------------------
 
 ifeq ($(BUILD),product)
-  CFLAGS		+= -DNDEBUG
+  CFLAGS    += -DNDEBUG
 endif
-
 
 SOURCES     := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS     := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJEXT)))
 
-#Defauilt Make
+# Default make
 all: directories $(TARGET)
 
-#Remake
+# Remake
 remake: cleaner all
 
-#Make the Directories
+# Make the Directories
 directories:
 	@mkdir -p $(TARGETDIR)
 	@mkdir -p $(BUILDDIR)
 
-#Clean only Objecst
+# Clean only objects
 clean:
 	@$(RM) -rf $(BUILDDIR)
 
-#Full Clean, Objects and Binaries
+# Full clean: objects and binaries
 cleaner: clean
 	@$(RM) -rf $(TARGETDIR)
 
-#Pull in dependency info for *existing* .o files
+# Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
 
-#Link
+# Link
 $(TARGET): $(OBJECTS)
 	$(CC) -o $(TARGETDIR)/$(TARGET) $^ $(LIB)
 
-#Compile
+# Compile
 $(BUILDDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INC) $(LIBDEP) -c -o $@ $<
@@ -82,5 +81,5 @@ $(BUILDDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)
 	@sed -e 's/.*://' -e 's/\\$$//' < $(BUILDDIR)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(BUILDDIR)/$*.$(DEPEXT)
 	@rm -f $(BUILDDIR)/$*.$(DEPEXT).tmp
 
-#Non-File Targets
+# Non-file targets
 .PHONY: all remake clean cleaner resources

@@ -1,0 +1,6 @@
+bin/
+obj/
+scripts/slurm.sh
+*.d
+*.o
+*.code-workspace

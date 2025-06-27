@@ -1,30 +1,30 @@
-export HYPERLOOP_TXT="../hyperloop_list.txt"
-export HYPERLOOP_DATA_DIR="../AO2Ds"
-export OUTPUT_DIR="../BerkeleyTrees"
+#!/usr/bin/bash
 
-export CONVERTER_PATH="$(dirname -- $(realpath $0))/../"
+HYPERLOOP_TXT="../hyperloop_list.txt"
+HYPERLOOP_DATA_DIR="../AO2Ds"
+OUTPUT_DIR="../BerkeleyTrees"
+
+CONVERTER_PATH="$(dirname -- "$(realpath "$0")")/../"
 
 # Compile the converter
-make -C $CONVERTER_PATH
+make -C "$CONVERTER_PATH"
 
-if [ ! -f $CONVERTER_PATH/bin/converter ]; then
-    echo "The converter binary doesn't exist."
-		exit 1
+if [ ! -f "$CONVERTER_PATH/bin/converter" ]; then
+    echo "The converter binary doesn't exist." && exit 1
 fi
 
 if ! which alien_find >/dev/null; then
-		echo "alien_find is not available"
-		exit 1
+    echo "alien_find is not available" && exit 1
 fi
 
 # Requires alien_find
-# Downloads the AO2Ds from the Hypeloop using the directory information
+# Downloads the AO2Ds from Hyperloop using the directory information
 # from HYPERLOOP_TXT. The downloaded files are saved to the HYPERLOOP_DATA_DIR.
-python3 downloadHyperloop.py \
---inputfilelist=$HYPERLOOP_TXT \
---outputfolder=$HYPERLOOP_DATA_DIR \
---filename=AO2D.root \
---nThreads=15
+python3 download_hyperloop.py \
+    --input $HYPERLOOP_TXT \
+    --output $HYPERLOOP_DATA_DIR \
+    --filename AO2D.root \
+    --nthreads 15
 
 if ! which sbatch >/dev/null; then
     echo "sbatch is not available"
