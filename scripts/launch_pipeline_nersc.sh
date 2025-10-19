@@ -11,50 +11,30 @@ Options:
   -c, --convert   Run conversion scheduling
   -t, --test      Run conversion in test mode
   -v, --verbose   Compile converter in verbose mode
-  -h, --help      Show this help message; for more details see the README
+  -h, --help      Show this help message; for more details see scripts/README.md
 
 EOF
 }
 
 PROJECT_ROOT="$(dirname -- "$(realpath "$0")")/../"
 PROJECT_ROOT="$( realpath "$PROJECT_ROOT" )"
+STAGING=$CFS/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER
 
 #### -------------- USER PARAMETERS -------------- #####
 
-# HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/example_24aj.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC24aj"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC24aj"
+HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/example_24aj.txt"
+OUTPUT_DIR="$CFS/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC24aj"
+# OUTPUT_DIR="$STAGING/LHC24aj"
 
-# HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/example_22o.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC22o"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC22o"
-
-# HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/22o_full.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC24aj"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC22o"
-
-# HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/24aj_full.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC24aj"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC24aj"
-
-# HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/22o_small_full.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC24aj"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC22o_small"
-
-HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/23zzm_full.txt"
-# OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/LHC24aj"
-OUTPUT_DIR="/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC23zzm"
-
-EMAIL="tucker_hwang@berkeley.edu"
-# EMAIL=
+EMAIL=
 NAOD=15
 
 #### ---------- RUNTIME PARAMETERS ---------- #####
 
 NTHREADS=20
 CONFIG="$PROJECT_ROOT/tree-cuts.yaml"
-AOD_DIR="$OUTPUT_DIR/AO2D"
-TREE_DIR="$OUTPUT_DIR/BerkeleyTrees"
+AOD_DIR() { echo "$OUTPUT_DIR/AO2D"; }
+TREE_DIR() { echo "$OUTPUT_DIR/BerkeleyTrees"; }
 
 SHIFTER=("shifter" "--module=cvmfs" "--image=tch285/o2alma:latest")
 ALIENV="/cvmfs/alice.cern.ch/bin/alienv"
@@ -104,6 +84,19 @@ if [[ -z "$download" && -z "$convert" ]]; then
     fi
 fi
 
+### Validate output directory in test mode to make sure we're in a staging directory
+if [[  -n "$testopt" ]]; then
+    if [[ ( "$OUTPUT_DIR" != $STAGING* ) ]]; then
+        new_output_dir=$STAGING/$( basename "$OUTPUT_DIR" )
+        ans=$(prompt "$OUTPUT_DIR is not a valid staging directory." "Set output directory to:\n\t$new_output_dir")
+        if [[ $ans == "y" ]]; then
+            OUTPUT_DIR=$new_output_dir
+        else
+            error "Exiting." && exit 2
+        fi
+    else info "Output directory validated for test run."; fi
+fi
+
 if [ -n "$download" ]; then
     check_cmd shifter
 
@@ -112,7 +105,7 @@ if [ -n "$download" ]; then
     "${SHIFTER[@]}" $ALIENV setenv $PACK_SPEC -c \
         python3 "$PROJECT_ROOT"/scripts/download_hyperloop.py \
             --input "$HYPERLOOP_FILELIST" \
-            --output "$AOD_DIR" \
+            --output "$(AOD_DIR)" \
             --filename AO2D.root \
             --nthreads $NTHREADS
     check_exit $? "Download failed!"
@@ -133,8 +126,8 @@ if [ -n "$convert" ]; then
     ./schedule_conversion.sh \
         -p "$PROJECT_ROOT/bin/converter" \
         -n "$NAOD" \
-        -i $AOD_DIR \
-        -o $TREE_DIR \
+        -i "$(AOD_DIR)" \
+        -o "$(TREE_DIR)" \
         -c "$CONFIG" \
         -e "$EMAIL" \
         "$testopt"

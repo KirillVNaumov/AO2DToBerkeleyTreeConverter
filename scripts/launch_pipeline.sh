@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+echo "THIS SCRIPT IS OUT OF DATE. DO NOT USE."
+exit 1
+
 HYPERLOOP_TXT="../hyperloop_list.txt"
 HYPERLOOP_DATA_DIR="../AO2Ds"
 OUTPUT_DIR="../BerkeleyTrees"

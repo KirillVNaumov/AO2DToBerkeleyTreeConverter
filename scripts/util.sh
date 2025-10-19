@@ -39,7 +39,7 @@ prompt() {
     fi
 
     while true; do
-        read -r -p $'\033[35m'"$question [y/n]: "$'\033[0m' answer
+        read -r -p $'\033[35m'"$( echo -e "$question" ) [y/n]: "$'\033[0m' answer
         answer="${answer,,}" # convert to lowercase
         case "$answer" in
             y|yes) echo "y"; return ;;

@@ -44,3 +44,7 @@ To build the converter binary, you can simply run `make` in the root of the repo
 ## Usage
 
 For general usage and documentation, please refer to the [README](scripts/README.md) in the `scripts` directory. For specifics on how to use the converter on the NERSC system, please see the [NERSC-specific instructions](https://github.com/alicernc/info/blob/main/conversion_at_perlmutter.md).
+
+## Future improvements
+
+Check our [issues](https://github.com/KirillVNaumov/AO2DToBerkeleyTreeConverter/issues) page!

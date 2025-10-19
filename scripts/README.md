@@ -7,15 +7,15 @@ This section describes the general usage of the downloader (`download_hyperloop.
 - [Table of contents](#table-of-contents)
 - [The launcher](#the-launcher)
 - [The HyperDownloader](#the-hyperdownloader)
-  - [Dependencies](#dependencies)
-  - [Configuration](#configuration)
+  - [Downloader dependencies](#downloader-dependencies)
+  - [Downloader configuration](#downloader-configuration)
   - [Obtaining AO2Ds](#obtaining-ao2ds)
-  - [Output](#output)
+  - [Downloader output](#downloader-output)
   - [Failed downloads](#failed-downloads)
 - [The conversion scheduler](#the-conversion-scheduler)
-  - [Dependencies](#dependencies-1)
-  - [Configuration](#configuration-1)
-  - [Output](#output-1)
+  - [Scheduler dependencies](#scheduler-dependencies)
+  - [Scheduler configuration](#scheduler-configuration)
+  - [Scheduler output](#scheduler-output)
 
 ## The launcher
 
@@ -28,11 +28,11 @@ The launcher (`scripts/launch_pipeline_nersc.sh`) steers the downloader and conv
 
 The downloader validates your AliEn token, identifies all matching files in a given set of Hyperloop directories, and downloads them to a specified location on disk.
 
-### Dependencies
+### Downloader dependencies
 
 The downloader utilizes only the standard library with the exception of the `rich` module. In addition, it must be run *inside* an `alienv` environment, where it has access to the AliEn tools, such as the token tools `alien-token-info` and `alien-token-init` as well as Grid tools like `alien_cp` and `alien_find`.
 
-### Configuration
+### Downloader configuration
 
 The downloader can be configured from the command line with the following options:
 
@@ -54,7 +54,7 @@ The conversion operates not on raw AO2Ds but rather on JE derived datasets. Thes
 3. On the far right, above the table, should be a "Copy all output directories" button. Click this and a comma-delimited list of the derived dataset's directories will be put on your clipboard.
 4. Paste this into a text file somewhere on the system, and direct the downloader to this path with the `--input` option. You can see some examples in the `hylists/` directory.
 
-### Output
+### Downloader output
 
 In addition to the downloaded AO2Ds, the downloader will also save
 
@@ -70,11 +70,11 @@ The downloader is configured to attempt a file download some number of times (sp
 
 Once the dataset has been downloaded from the Grid, you can now convert the dataset. We highly recommend using a batch job to do this. The batch job can be scheduled via the conversion scheduler `scripts/schedule_conversion_nersc.sh`. Conversion on the NERSC systems is highly recommended, since all of the dependencies are immediately available to users.
 
-### Dependencies
+### Scheduler dependencies
 
 The scheduler relies only on Bash and a Slurm configuration accessible via `sbatch`, which it will check for when it is run.
 
-### Configuration
+### Scheduler configuration
 
 The downloader can be configured from the command line with the following options:
 
@@ -91,6 +91,6 @@ The downloader can be configured from the command line with the following option
 > [!WARNING]
 > Because the output directory is automatically cleared before converting, it is very easy to accidentally wipe your previous work, or worse, delete someone else's data! Using some testing/staging area to test conversions, rather than the final directory you want to store your data in, is recommended.  There is a dedicated directory for this purpose on NERSC.
 
-### Output
+### Scheduler output
 
 The scheduler will first save a list of AO2Ds found in the input directory. It will then construct a conversion batch script to convert these AO2Ds into BerkeleyTrees. If run in test mode, the scheduler will run this script directly to convert a set of AO2Ds into a single BerkeleyTree, as well as show the standard output to the console. If run in production mode, the scheduler will submit this batch script via `sbatch`. It will also submit a dependency job to save a filelist of the produced trees once they are all converted.
