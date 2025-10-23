@@ -13,18 +13,19 @@
 # Example usage:
 # python download_hyperloop.py --input /path/to/inputfilelist.txt --output /path/to/output --filename <name> --nthreads 4
 
-import sys
+import argparse
+import json
+import logging
 import os
 import shutil
-import argparse
 import subprocess
-import logging
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from glob import iglob
+
 from rich.logging import RichHandler
 from rich.progress import Progress
-
 
 log = logging.getLogger('downloader')
 log.setLevel(logging.DEBUG)
@@ -56,7 +57,7 @@ def download_from_alien(pair, ntries):
         subprocess.check_output(f'alien_cp -f -retry {ntries} {alienpath} {localpath}', shell=True,
                                 encoding='utf-8', stderr = subprocess.PIPE)
     except subprocess.CalledProcessError as e:
-        # catch error, reparse and raise
+        # catch, reparse and raise
         raise FailedDownloadError(e, alienpath, localpath)
     return f"Download success: {alienpath} to {localpath}"
 
@@ -110,22 +111,56 @@ def check_output_directory(path):
         os.makedirs(path)
         log.info("Output directory created.")
 
+def get_o2physics_version(hydirs, output_dir, ntries = 3, json_file = "full_config.json"):
+    versions = set()
+    for hydir in hydirs:
+        try:
+            # Use strip() to remove spurious newline at end of alien_find output
+            path = subprocess.run(f'alien_find {hydir}/.. {json_file}', shell = True, encoding = 'utf-8',
+                                    stdout = subprocess.PIPE).stdout.strip()
+            pair = FilePair(f"alien://{path}", f"file:{output_dir}/")
+            msg = download_from_alien(pair, ntries)
+            log.debug(msg)
+            with open(f'{output_dir}/{json_file}', 'r') as file:
+                cfg = json.load(file)
+            version = cfg["package_tag"]
+            versions.add(version)
+        except subprocess.CalledProcessError as e:
+            log.error(f"Failed to find config in {hydir}: {e}")
+        except FailedDownloadError as e:
+            log.error(f"Failed download with exit code {e.returncode} after {ntries} attempts:")
+            log.error(e.stdout)
+            log.error(e.stderr)
+
+    if not versions:
+        msg =  "Failed to find/download config json from any Hyperloop directory."
+        log.error(msg)
+    elif len(versions) > 1:
+        msg = f"Found multiple O2Physics versions: {', '.join(versions)}."
+        log.error(msg)
+    else:
+        version = f"{versions.pop()}"
+        log.info(f"Found O2Physics version: {version}")
+        return version
+    return msg
+
 def create_readme(hyperloop_dirs, filelists, output_dir):
     """Create README with relevant information on the converter and dataset."""
 
     rm = f"{output_dir}/README.md"
-    hash_long = subprocess.check_output(['git', 'rev-parse', 'HEAD'], encoding='ascii').strip()
-    hash_short = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], encoding='ascii').strip()
-    describe = subprocess.check_output(['git', 'describe'], encoding='ascii').strip()
-    branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='ascii').strip()
+    hash_long       = subprocess.check_output(['git', 'rev-parse', 'HEAD'], encoding='ascii').strip()
+    hash_short      = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'], encoding='ascii').strip()
+    describe        = subprocess.check_output(['git', 'describe'], encoding='ascii').strip()
+    branch          = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], encoding='ascii').strip()
     remote, rbranch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', r'@{u}'], encoding='ascii').strip().split("/")
-    ssh_url = subprocess.check_output(['git', 'ls-remote', '--get-url', remote], encoding='ascii').strip()
-    http_url = f"https://github.com/{ssh_url.split(':', 1)[1]}"
-    msg = subprocess.check_output(['git', 'log', '-1', '--pretty=%B'], encoding='ascii').strip()
-    dt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ssh_url         = subprocess.check_output(['git', 'ls-remote', '--get-url', remote], encoding='ascii').strip()
+    http_url        = f"https://github.com/{ssh_url.split(':', 1)[1]}"
+    msg             = subprocess.check_output(['git', 'log', '-1', '--pretty=%B'], encoding='ascii').strip()
+    dt              = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    dirs = '\n'.join([f"- {dirname}" for dirname in hyperloop_dirs])
-    flist = '\n'.join([f"- {filelist}" for filelist in filelists])
+    o2physics_ver   = get_o2physics_version(hyperloop_dirs, output_dir)
+    dirlist         = '\n'.join([f"- {dirname}" for dirname in hyperloop_dirs])
+    filelist        = '\n'.join([f"- {filelist}" for filelist in filelists])
 
     readme = (  f"# HYPERDOWNLOADER\n\n"
                 f"Dataset downloaded on {dt}\n\n"
@@ -136,10 +171,12 @@ def create_readme(hyperloop_dirs, filelists, output_dir):
                 f"- Commit hash (short / long): {hash_short} / {hash_long}\n"
                 f"  - {msg}\n\n"
                 f"## Dataset\n\n"
+                f"O2Physics version:\n"
+                f"  {o2physics_ver}\n\n"
                  "Hyperloop directories:\n\n"
-                f"{dirs}\n\n"
+                f"{dirlist}\n\n"
                  "Filelists:\n\n"
-                f"{flist}\n"
+                f"{filelist}\n"
     )
     with open(rm, 'w') as f:
         f.write(readme)
@@ -151,21 +188,9 @@ def download_hyperloop(hyperloop_list, output_dir, filename, nthreads, ntries):
     # NOTE: works even if filename has no commas
     input_filenames = [f for f in filename.split(',') if f != ""]
 
-    # The Hyperloop page output has a final comma if there is only one directory,
-    # so we remove a possible final comma with strip before splitting.
+    # Extract Hyperloop directories to copy over
     with open(hyperloop_list, 'r') as f:
-        hyperloop_dirs = f.read().strip(',').split(',')
-
-    # Check if hyperloop directories have AOD subdirectories in them
-    log.info("Checking if there is an /AOD directory in the path ...")
-    try:
-        subprocess.run(f'alien_ls {hyperloop_dirs[0]}/AOD', shell = True, encoding = 'utf-8',
-                        check = True, stdout = subprocess.DEVNULL)
-        log.info("Found /AOD directory in the path.")
-        end = ""
-    except subprocess.CalledProcessError:
-        log.info("No /AOD directory found in the path.")
-        end = "/AOD"
+        hyperloop_dirs = f.read().split(',')
 
     # loop over list of hyperloop_dirs and find all matching files inside
     log.info(f"Searching {len(hyperloop_dirs)} Hyperloop directories for {len(input_filenames)} filename(s)...")
@@ -176,7 +201,7 @@ def download_hyperloop(hyperloop_list, output_dir, filename, nthreads, ntries):
         for hydir, filename in ((hd, fn) for hd in hyperloop_dirs for fn in input_filenames):
             try:
                 # Use strip() to remove spurious newline at end of alien_find output
-                aod_paths += subprocess.run(f'alien_find {hydir}{end} {filename}', shell = True, encoding = 'utf-8',
+                aod_paths += subprocess.run(f'alien_find {hydir} {filename}', shell = True, encoding = 'utf-8',
                                             stdout = subprocess.PIPE).stdout.strip().split('\n')
             except subprocess.CalledProcessError as e:
                 log.error(f"Failed to find {filename} in {hydir}: {e}")
@@ -187,7 +212,7 @@ def download_hyperloop(hyperloop_list, output_dir, filename, nthreads, ntries):
     max_nslashes = max([path.count('/') for path in aod_paths])
     aod_paths = [x for x in aod_paths if x.count('/') == max_nslashes]
     log.info(f"Removed potential duplicates. Found {len(aod_paths)} files to download.")
-   
+
     # Do multithreading download
     pairs = []
     for d in aod_paths:
@@ -200,8 +225,8 @@ def download_hyperloop(hyperloop_list, output_dir, filename, nthreads, ntries):
 
     # Reduce number of threads if we have more threads than files
     if nthreads > nfiles:
-        nthreads = nfiles
         log.warning(f"More threads than files, reducing to {nfiles}.")
+        nthreads = nfiles
 
     failed = []
     with ThreadPoolExecutor(max_workers = nthreads) as executor, Progress() as progress:

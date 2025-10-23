@@ -22,9 +22,9 @@ STAGING=$CFS/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER
 
 #### -------------- USER PARAMETERS -------------- #####
 
-HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/example_24aj.txt"
-OUTPUT_DIR="$CFS/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC24aj"
-# OUTPUT_DIR="$STAGING/LHC24aj"
+HYPERLOOP_FILELIST="$PROJECT_ROOT/hylists/example_22o.txt"
+# OUTPUT_DIR="$CFS/alice/alicepro/hiccup/rstorage/alice/run3/data/LHC24aj"
+OUTPUT_DIR="$STAGING/LHC22o_test"
 
 EMAIL=
 NAOD=15
