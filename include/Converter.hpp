@@ -93,12 +93,13 @@ public:
   }
 
   ~Converter() {
-    outFile->cd();
-    // LOOP OVER OUTput hists and write to file
-    outputTree->Write();
+    // outFile->cd();
+    // loop overput hists and write to file
+    outFile->WriteTObject(outputTree);
     if (_createHistograms) {
-      outputhists->Write();
+      outFile->WriteTObject(outputhists);
     }
+    outFile->Close();  
   }
 };
 

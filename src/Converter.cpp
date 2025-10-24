@@ -6,7 +6,7 @@
 #include "TRint.h"
 
 // flat trees
-// event prpoperties tree
+// event properties tree
 // track tree
 // cluster tree
 
@@ -70,6 +70,7 @@ void Converter::createTree() {
                      &fBuffer_cluster_data_clusterdef);
   outputTree->Branch("cluster_data_matchedTrackIndex",
                      &fBuffer_cluster_data_matchedTrackIndex);
+  outputTree->SetDirectory(0);
 }
 
 void Converter::clearBuffers() {
