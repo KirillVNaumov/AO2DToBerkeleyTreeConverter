@@ -70,9 +70,8 @@ def check_alien():
         log.info("AliEn token validated.")
     elif result.returncode == 2:
         # no valid token
-        log.warning("Found no valid AliEn token.")
-        result = subprocess.run('alien-token-init', shell=True, check = True, stderr=subprocess.PIPE)
-        log.info("AliEn token created.")
+        log.critical("No valid AliEn token found. Run `source get_token.sh` to refresh your token.")
+        sys.exit(2)
     elif result.returncode == 127:
         # alien-token-info not found
         log.critical("No valid alien-token-info command: are you in the right alienv?")

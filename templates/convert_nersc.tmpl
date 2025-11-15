@@ -54,7 +54,7 @@ done
 
 
 cmd="$shifter_cmd --module=cvmfs \
-    /cvmfs/alice.cern.ch/bin/alienv setenv JAliEn-ROOT/0.7.14-43 -c \
+    /cvmfs/alice.cern.ch/bin/alienv setenv {{ROOT_PACK}} -c \
     {{CONVERTER_PATH}} \
       -i $input_txt -o $output_file -c $config_file"
 echo "Conversion command: $cmd"

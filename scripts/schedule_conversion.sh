@@ -24,8 +24,8 @@ cd "$project_root/scripts"
 . util.sh
 
 # using GNU getopt in place of Python argparse
-PARSEDARGS=$(getopt -o p:i:o:n:c:e:th \
-                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,email:,test,help \
+PARSEDARGS=$(getopt -o p:i:o:n:c:r:e:th \
+                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,root-pack:,email:,test,help \
                     -n 'conversion-scheduler' -- "$@")
 PARSE_EXIT=$?
 if [ $PARSE_EXIT -ne 0 ] ; then exit $PARSE_EXIT ; fi
@@ -40,20 +40,22 @@ aod_name=
 tree_name=
 nfiles_per_tree=
 config=
+root_pack=
 email=
 test=false
 while true; do
     case "$1" in
-        -p | --path )    converter_path="$2"; shift 2 ;;
-        -i | --input )   input="$2"; shift 2 ;;
-        -o | --output )  output="$2"; shift 2 ;;
-        --aod-name )     aod_name="$2"; shift 2 ;;
-        --tree-name )    tree_name="$2"; shift 2 ;;
-        -n | --nfiles )  nfiles_per_tree="$2"; shift 2 ;;
-        -c | --config )  config="$2"; shift 2 ;;
-        -e | --email )   email="$2"; shift 2 ;;
-        -t | --test )    test="true"; shift ;;
-        -h | --help )    show_help; exit 0 ;;
+        -p | --path )      converter_path="$2"; shift 2 ;;
+        -i | --input )     input="$2"; shift 2 ;;
+        -o | --output )    output="$2"; shift 2 ;;
+        --aod-name )       aod_name="$2"; shift 2 ;;
+        --tree-name )      tree_name="$2"; shift 2 ;;
+        -n | --nfiles )    nfiles_per_tree="$2"; shift 2 ;;
+        -c | --config )    config="$2"; shift 2 ;;
+        -r | --root-pack ) root_pack="$2"; shift 2 ;;
+        -e | --email )     email="$2"; shift 2 ;;
+        -t | --test )      test="true"; shift ;;
+        -h | --help )      show_help; exit 0 ;;
         -- ) shift; break ;;
         * ) break ;;
     esac
@@ -73,6 +75,7 @@ done
 [ -z "$config" ] && warn "Configuration not specified, defaulting to tree-cuts.yaml in root directory." && \
     config=$project_root/tree-cuts.yaml
 [ ! -f "$config" ] && error "Configuration file '$config' not found." && exit 1
+[ -z "$root_pack" ] && error "ROOT package not set." && exit 1
 
 settings=$(cat << EOF
 Beginning conversion. Your conversion settings:
@@ -83,6 +86,7 @@ Beginning conversion. Your conversion settings:
     Tree name: $tree_name
     Number of files per tree: $nfiles_per_tree
     Config file: $config
+    ROOT package: $root_pack
     Email: $email
     Test mode: $test
 EOF
@@ -133,6 +137,7 @@ sed -e "s|{{NJOBS}}|$njobs|g" \
     -e "s|{{NFILES_PER_TREE}}|$nfiles_per_tree|g" \
     -e "s|{{TREE_NAME}}|$tree_name|g" \
     -e "s|{{CONVERTER_PATH}}|$converter_path|g" \
+    -e "s|{{ROOT_PACK}}|$root_pack|g" \
     "$project_root/templates/convert_nersc.tmpl" > "$output/convert.sh"
 
 if [ $test == "true" ]; then

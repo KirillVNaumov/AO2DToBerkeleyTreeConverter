@@ -38,8 +38,12 @@ TREE_DIR() { echo "$OUTPUT_DIR/BerkeleyTrees"; }
 
 SHIFTER=("shifter" "--module=cvmfs" "--image=tch285/o2alma:latest")
 ALIENV="/cvmfs/alice.cern.ch/bin/alienv"
-# NOTE: alien-token-init stdin prompt broken for pre-release > 43
-PACK_SPEC="JAliEn-ROOT/0.7.14-43"
+PYTHON_PACK="xjalienfs/1.6.9-1" # provides rich module
+ROOT_PACK="ROOT/v6-36-04-alice2-2"
+# ROOT_PACK="JAliEn-ROOT/0.7.14-43"
+# ROOT_PACK="ROOT::v6-32-06-alice1-33" # specific root from jalien, works
+# ROOT_PACK="ROOT::v6-36-04-alice2-2" # specific root from root, doesn't work
+# ROOT_PACK="ROOT::v6-34-06-alice1-1" # specific root from jalien, works
 
 #### ---------- SOURCE CODE ---------- #####
 
@@ -100,9 +104,23 @@ fi
 if [ -n "$download" ]; then
     check_cmd shifter
 
+    # Check AliEn token
+    "${SHIFTER[@]}" $ALIENV setenv xjalienfs/1.6.9-1 -c \
+        alien-token-info 2>/dev/null
+    ret=$?
+    if [[ $ret -eq 0 ]]; then
+        info "Valid AliEn token found."
+    elif [[ $ret -eq 2 ]]; then
+        error "No valid AliEn token found. Run \`source get_token.sh\` to refresh your token."
+        exit 2
+    else
+        error "Unrecognized error $ret, crashing out."
+        exit $ret
+    fi
+
     # Downloads the AO2Ds from Hyperloop using the directory information
     # from HYPERLOOP_FILELIST. The downloaded files are saved to the AOD_DIR.
-    "${SHIFTER[@]}" $ALIENV setenv $PACK_SPEC -c \
+    "${SHIFTER[@]}" $ALIENV setenv $PYTHON_PACK -c \
         python3 "$PROJECT_ROOT"/scripts/download_hyperloop.py \
             --input "$HYPERLOOP_FILELIST" \
             --output "$(AOD_DIR)" \
@@ -117,8 +135,11 @@ if [ -n "$convert" ]; then
     check_cmd shifter
 
     # Compile the converter
-    pretty "${SHIFTER[@]}" $ALIENV setenv $PACK_SPEC -c \
+    pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
         make remake "${buildopt[@]}"
+        # make cleaner "${buildopt[@]}"
+    # pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
+    #     make "${buildopt[@]}"
     check_exit $? "Compilation failed!"
 
     # Schedules sbatch jobs to convert a number of AO2Ds found
@@ -130,6 +151,7 @@ if [ -n "$convert" ]; then
         -o "$(TREE_DIR)" \
         -c "$CONFIG" \
         -e "$EMAIL" \
+        -r "$ROOT_PACK" \
         "$testopt"
     check_exit $? "Conversion failed!"
 else
