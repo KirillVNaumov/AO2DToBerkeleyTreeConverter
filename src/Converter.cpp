@@ -5,13 +5,6 @@
 #include "TROOT.h"
 #include "TRint.h"
 
-// flat trees
-// event properties tree
-// track tree
-// cluster tree
-
-// they all have event index and then group by operations to get events and
-// iterate accordingly
 
 void Converter::createQAHistos() {
   hTrackPt = new TH1F("hTrackPt", "Track p_{T}", 100, 0, 100);
@@ -44,7 +37,7 @@ void Converter::createTree() {
   outputTree = new TTree("eventTree", "eventTree");
   outputTree->Branch("run_number", &fBuffer_RunNumber, "RunNumber/I");
   outputTree->Branch("event_selection", &fBuffer_eventselection,
-                     "eventselection/s"); // todo check format
+                     "eventselection/s"); // TODO: check format
   outputTree->Branch("triggersel", &fBuffer_triggersel, "triggersel/l");
   outputTree->Branch("centrality", &fBuffer_centrality, "centrality/F");
   outputTree->Branch("multiplicity", &fBuffer_multiplicity, "multiplicity/F");
@@ -68,8 +61,12 @@ void Converter::createTree() {
   outputTree->Branch("cluster_data_nlm", &fBuffer_cluster_data_nlm);
   outputTree->Branch("cluster_data_clusterdef",
                      &fBuffer_cluster_data_clusterdef);
-  outputTree->Branch("cluster_data_matchedTrackIndex",
-                     &fBuffer_cluster_data_matchedTrackIndex);
+  outputTree->Branch("cluster_data_matchedTrackN",
+                     &fBuffer_cluster_data_matchedTrackN);
+  outputTree->Branch("cluster_data_matchedTrackEta",
+                     &fBuffer_cluster_data_matchedTrackEta);
+  outputTree->Branch("cluster_data_matchedTrackPhi",
+                     &fBuffer_cluster_data_matchedTrackPhi);
   outputTree->SetDirectory(0);
 }
 
@@ -91,7 +88,9 @@ void Converter::clearBuffers() {
   fBuffer_cluster_data_distancebadchannel->clear();
   fBuffer_cluster_data_nlm->clear();
   fBuffer_cluster_data_clusterdef->clear();
-  fBuffer_cluster_data_matchedTrackIndex->clear();
+  fBuffer_cluster_data_matchedTrackN->clear();
+  fBuffer_cluster_data_matchedTrackEta->clear();
+  fBuffer_cluster_data_matchedTrackPhi->clear();
 }
 
 // write events to TTree
@@ -100,6 +99,8 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     // clear all buffers
     clearBuffers();
 
+    // CHECK: does this actually do anything? if so, have to be careful of
+    // what happens to matched tracks
     if (treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
@@ -113,6 +114,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     }
 
     // fill event level properties
+    // TODO: check types, maybe some way to do this dynamically?
     fBuffer_RunNumber = (Int_t)ev.col.runNumber;
     fBuffer_eventselection = (uint16_t)ev.col.eventsel;
     fBuffer_centrality = (Float_t)ev.col.centrality;
@@ -150,8 +152,10 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
           (UShort_t)cl.distancebadchannel);
       fBuffer_cluster_data_nlm->push_back((UShort_t)cl.nlm);
       fBuffer_cluster_data_clusterdef->push_back((UShort_t)cl.clusterdef);
-      fBuffer_cluster_data_matchedTrackIndex->push_back(
-          (UShort_t)cl.matchedTrackIndex);
+      fBuffer_cluster_data_matchedTrackN->push_back(
+          (UShort_t)cl.matchedTrackN);
+      fBuffer_cluster_data_matchedTrackEta->insert(fBuffer_cluster_data_matchedTrackEta->end(), cl.matchedTrackEta.begin(), cl.matchedTrackEta.end());
+      fBuffer_cluster_data_matchedTrackPhi->insert(fBuffer_cluster_data_matchedTrackPhi->end(), cl.matchedTrackPhi.begin(), cl.matchedTrackPhi.end());
     }
 
     // fill tree
@@ -215,10 +219,14 @@ void Converter::processFile(TFile *file) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
       continue;
+    std::cout << "  Converting dataframe: " << key->GetName() << std::endl;
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
-    TTree *O2jclustertrack = (TTree *)dir->Get("O2jclustertrack");
+    TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
+    // TTree *O2jclustertrack = (TTree *)dir->Get("O2jclustertrack");
     assert(O2jclustertrack);
+    TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
+    assert(O2jemctrack);
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     assert(O2jcollision);
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
@@ -230,9 +238,9 @@ void Converter::processFile(TFile *file) {
 
     // build event
     events =
-        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack);
+        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack);
 
-    DEBUG("Event size:" << events.size())
+    DEBUG("Event size: " << events.size())
     totalNumberOfEvents += events.size();
 
     // do event selection

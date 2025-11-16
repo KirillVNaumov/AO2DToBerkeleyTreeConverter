@@ -25,6 +25,7 @@ void convertAO2DtoAOD(TString inputFileList = "",
     TString filePath = fileList.at(i);
     std::cout << "-> Processing file " << filePath << std::endl;
     TFile *in = new TFile(filePath.Data());
+    assert(in);
     c.processFile(in);
     in->Close();
   }
