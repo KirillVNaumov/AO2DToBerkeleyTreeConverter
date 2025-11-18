@@ -35,8 +35,8 @@ std::vector<UShort_t> *fBuffer_cluster_data_distancebadchannel;
 std::vector<UShort_t> *fBuffer_cluster_data_nlm;
 std::vector<UShort_t> *fBuffer_cluster_data_clusterdef;
 std::vector<UShort_t> *fBuffer_cluster_data_matchedTrackN;
-std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackEta;
-std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackPhi;
+std::vector<std::vector<Double_t>>  *fBuffer_cluster_data_matchedTrackEta;
+std::vector<std::vector<Double_t>>  *fBuffer_cluster_data_matchedTrackPhi;
 
 template<class T>
 void GetLeafValue (TTree *tree, const char* name, T& container) {
@@ -86,8 +86,8 @@ struct Cluster {
   Int_t leadingcellnumber;
   Int_t subleadingcellnumber;
   Int_t matchedTrackN = 0;
-  std::vector<Float_t> matchedTrackEta;
-  std::vector<Float_t> matchedTrackPhi;
+  std::vector<Double_t> matchedTrackEta;
+  std::vector<Double_t> matchedTrackPhi;
 
   void build(TTree *tree) {
     GetLeafValue(tree, "fEnergy", energy);
