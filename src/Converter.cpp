@@ -67,6 +67,8 @@ void Converter::createTree() {
                      &fBuffer_cluster_data_matchedTrackEta);
   outputTree->Branch("cluster_data_matchedTrackPhi",
                      &fBuffer_cluster_data_matchedTrackPhi);
+  outputTree->Branch("cluster_data_matchedTrackP",
+                     &fBuffer_cluster_data_matchedTrackP);
   outputTree->SetDirectory(0);
 }
 
@@ -91,6 +93,7 @@ void Converter::clearBuffers() {
   fBuffer_cluster_data_matchedTrackN->clear();
   fBuffer_cluster_data_matchedTrackEta->clear();
   fBuffer_cluster_data_matchedTrackPhi->clear();
+  fBuffer_cluster_data_matchedTrackP->clear();
 }
 
 // write events to TTree
@@ -156,6 +159,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
           (UShort_t)cl.matchedTrackN);
       fBuffer_cluster_data_matchedTrackEta->push_back(cl.matchedTrackEta);
       fBuffer_cluster_data_matchedTrackPhi->push_back(cl.matchedTrackPhi);
+      fBuffer_cluster_data_matchedTrackP->push_back(cl.matchedTrackP);
     }
 
     // fill tree

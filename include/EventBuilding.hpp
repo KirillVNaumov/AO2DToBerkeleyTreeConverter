@@ -4,6 +4,8 @@
 #include "debug.hpp"
 
 #include <unordered_map>
+#include <cmath>
+#include <tuple>
 #include <TTreeReader.h>
 #include <TTreeReaderValue.h>
 #include <TTreeReaderArray.h>
@@ -37,6 +39,7 @@ std::vector<UShort_t> *fBuffer_cluster_data_clusterdef;
 std::vector<UShort_t> *fBuffer_cluster_data_matchedTrackN;
 std::vector<std::vector<Double_t>>  *fBuffer_cluster_data_matchedTrackEta;
 std::vector<std::vector<Double_t>>  *fBuffer_cluster_data_matchedTrackPhi;
+std::vector<std::vector<Double_t>>  *fBuffer_cluster_data_matchedTrackP;
 
 template<class T>
 void GetLeafValue (TTree *tree, const char* name, T& container) {
@@ -88,6 +91,7 @@ struct Cluster {
   Int_t matchedTrackN = 0;
   std::vector<Double_t> matchedTrackEta;
   std::vector<Double_t> matchedTrackPhi;
+  std::vector<Double_t> matchedTrackP;
 
   void build(TTree *tree) {
     GetLeafValue(tree, "fEnergy", energy);
@@ -110,7 +114,7 @@ struct Cluster {
   }
 
   void getMatchedTracks(const TTreeReaderArray<Int_t> &matchedTrackIdxs,
-                        const std::unordered_map<Int_t, std::pair<Float_t, Float_t>>& matchedTrackMap) {
+                        const std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t>>& matchedTrackMap) {
     // if no matched tracks, skip (number of matched set to zero already)
     if (matchedTrackIdxs.IsEmpty()) {
       return;
@@ -123,10 +127,10 @@ struct Cluster {
         // shouldn't happen
         std::cerr << "Matched track not found in map" << std::endl;
         assert(false);
-      } else {
-        matchedTrackEta.push_back(it->second.first);
-        matchedTrackPhi.push_back(it->second.second);
       }
+      matchedTrackEta.push_back(std::get<0>(it->second));
+      matchedTrackPhi.push_back(std::get<1>(it->second));
+      matchedTrackP  .push_back(std::get<2>(it->second));
     }
   }
 };
@@ -180,8 +184,8 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   std::unordered_map<int, std::vector<int>> trackMap;
   // map of collision index -> cluster indices for collision
   std::unordered_map<int, std::vector<int>> clusterMap;
-  // map of track index of matched tracks -> track's etaEMCAL and phiEMCAL
-  std::unordered_map<Int_t, std::pair<Float_t, Float_t>> matchedTrackMap;
+  // map of track index of matched tracks -> track's etaEMCAL, phiEMCAL, momentum
+  std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t>> matchedTrackMap;
 
   TTreeReaderArray<Int_t> matchedTrackIdxs(*clustertracks, "fIndexArrayJTracks");
 
@@ -221,14 +225,19 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   TTreeReaderValue<Float_t> phi(*emctracks, "fPhiEMCAL");
   TTreeReaderValue<Float_t> eta(*emctracks, "fEtaEMCAL");
   while (emctracks->Next()) {
-    // map each track index with its entry number in emctracks
-    matchedTrackMap.try_emplace(*trackIdx, *eta, *phi);
+    tracks->GetEntry(*trackIdx);
+    Float_t trackPt, trackEta, trackP;
+    GetLeafValue(tracks, "fPt", trackPt);
+    GetLeafValue(tracks, "fEta", trackEta);
+    trackP = trackPt * cosh(trackEta);
+    // map each track index to its etaEMCAL, phiEMCAL, and momentum
+    matchedTrackMap.try_emplace(*trackIdx, *eta, *phi, trackP);
   }
 
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
     collisions->GetEntry(idxCol);
     Event ev;
-    //TODO: is it guaranteed a single AO2D has the same run number?
+    //TODO: is it guaranteed a single DF has the same run number?
     GetLeafValue(bc, "fRunNumber", ev.col.runNumber);
     // add this collision to event
     ev.col.build(collisions);
