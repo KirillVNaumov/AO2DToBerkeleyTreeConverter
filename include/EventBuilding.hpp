@@ -115,6 +115,7 @@ struct Cluster {
     if (matchedTrackIdxs.IsEmpty()) {
       return;
     }
+    matchedTrackN = matchedTrackIdxs.GetSize();
 
     for (const Int_t& matchedTrackIdx: matchedTrackIdxs) {
       auto it = matchedTrackMap.find(matchedTrackIdx);
