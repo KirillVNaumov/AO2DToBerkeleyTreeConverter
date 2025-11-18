@@ -223,14 +223,14 @@ void Converter::processFile(TFile *file) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
       continue;
-    std::cout << "  Converting dataframe: " << key->GetName() << std::endl;
+    std::cout << "   Converting dataframe: " << key->GetName() << std::endl;
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
     TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
     // TTree *O2jclustertrack = (TTree *)dir->Get("O2jclustertrack");
-    assert(O2jclustertrack);
+    assert(!O2jclustertrack->IsInvalid());
     TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
-    assert(O2jemctrack);
+    assert(!O2jemctrack->IsInvalid());
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     assert(O2jcollision);
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
