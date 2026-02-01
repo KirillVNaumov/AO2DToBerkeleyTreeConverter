@@ -14,6 +14,7 @@
 Int_t fBuffer_RunNumber;
 Float_t fBuffer_centrality;
 Float_t fBuffer_multiplicity;
+Int_t fBuffer_trackOccupancyInTimeRange;
 uint16_t fBuffer_eventselection;
 uint64_t fBuffer_triggersel;
 
@@ -144,6 +145,7 @@ struct Collision {
   Float_t posz;
   Float_t multiplicity;
   Float_t centrality;
+  Int_t trackOccupancyInTimeRange;
   uint16_t eventsel; // this should be a uint16_t
   uint64_t triggersel;
 
@@ -156,6 +158,7 @@ struct Collision {
     GetLeafValue(tree, "fCentrality", centrality);
     GetLeafValue(tree, "fEventSel", eventsel);
     GetLeafValue(tree, "fTriggerSel", triggersel);
+    GetLeafValue(tree, "fTrackOccupancyInTimeRange", trackOccupancyInTimeRange);
   }
 };
 

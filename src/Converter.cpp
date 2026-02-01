@@ -36,6 +36,8 @@ void Converter::createQAHistos() {
 void Converter::createTree() {
   outputTree = new TTree("eventTree", "eventTree");
   outputTree->Branch("run_number", &fBuffer_RunNumber, "RunNumber/I");
+  outputTree->Branch("trackOccupancyInTimeRange", &fBuffer_trackOccupancyInTimeRange,
+                     "trackOccupancyInTimeRange/I");
   outputTree->Branch("event_selection", &fBuffer_eventselection,
                      "eventselection/s"); // TODO: check format
   outputTree->Branch("triggersel", &fBuffer_triggersel, "triggersel/l");
@@ -123,6 +125,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     fBuffer_centrality = (Float_t)ev.col.centrality;
     fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
     fBuffer_triggersel = (uint64_t)ev.col.triggersel;
+    fBuffer_trackOccupancyInTimeRange = (Int_t)ev.col.trackOccupancyInTimeRange;
 
     trackCuts = treecuts["track_cuts"];
     // fill track properties
