@@ -65,12 +65,14 @@ void Converter::createTree() {
                      &fBuffer_cluster_data_clusterdef);
   outputTree->Branch("cluster_data_matchedTrackN",
                      &fBuffer_cluster_data_matchedTrackN);
-  outputTree->Branch("cluster_data_matchedTrackEta",
-                     &fBuffer_cluster_data_matchedTrackEta);
-  outputTree->Branch("cluster_data_matchedTrackPhi",
-                     &fBuffer_cluster_data_matchedTrackPhi);
+  outputTree->Branch("cluster_data_matchedTrackDeltaEta",
+                     &fBuffer_cluster_data_matchedTrackDeltaEta);
+  outputTree->Branch("cluster_data_matchedTrackDeltaPhi",
+                     &fBuffer_cluster_data_matchedTrackDeltaPhi);
   outputTree->Branch("cluster_data_matchedTrackP",
                      &fBuffer_cluster_data_matchedTrackP);
+  outputTree->Branch("cluster_data_matchedTrackSel",
+                     &fBuffer_cluster_data_matchedTrackSel);
   // outputTree->SetDirectory(0);
 }
 
@@ -93,9 +95,10 @@ void Converter::clearBuffers() {
   fBuffer_cluster_data_nlm->clear();
   fBuffer_cluster_data_clusterdef->clear();
   fBuffer_cluster_data_matchedTrackN->clear();
-  fBuffer_cluster_data_matchedTrackEta->clear();
-  fBuffer_cluster_data_matchedTrackPhi->clear();
+  fBuffer_cluster_data_matchedTrackDeltaEta->clear();
+  fBuffer_cluster_data_matchedTrackDeltaPhi->clear();
   fBuffer_cluster_data_matchedTrackP->clear();
+  fBuffer_cluster_data_matchedTrackSel->clear();
 }
 
 // write events to TTree
@@ -160,9 +163,10 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
       fBuffer_cluster_data_clusterdef->push_back((UShort_t)cl.clusterdef);
       fBuffer_cluster_data_matchedTrackN->push_back(
           (UShort_t)cl.matchedTrackN);
-      fBuffer_cluster_data_matchedTrackEta->insert(fBuffer_cluster_data_matchedTrackEta->end(), cl.matchedTrackEta.begin(), cl.matchedTrackEta.end());
-      fBuffer_cluster_data_matchedTrackPhi->insert(fBuffer_cluster_data_matchedTrackPhi->end(), cl.matchedTrackPhi.begin(), cl.matchedTrackPhi.end());
+      fBuffer_cluster_data_matchedTrackDeltaEta->insert(fBuffer_cluster_data_matchedTrackDeltaEta->end(), cl.matchedTrackDeltaEta.begin(), cl.matchedTrackDeltaEta.end());
+      fBuffer_cluster_data_matchedTrackDeltaPhi->insert(fBuffer_cluster_data_matchedTrackDeltaPhi->end(), cl.matchedTrackDeltaPhi.begin(), cl.matchedTrackDeltaPhi.end());
       fBuffer_cluster_data_matchedTrackP->insert(fBuffer_cluster_data_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
+      fBuffer_cluster_data_matchedTrackSel->insert(fBuffer_cluster_data_matchedTrackSel->end(), cl.matchedTrackSel.begin(), cl.matchedTrackSel.end());
     }
 
     // fill tree

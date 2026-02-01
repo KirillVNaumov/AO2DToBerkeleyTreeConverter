@@ -38,9 +38,10 @@ std::vector<UShort_t> *fBuffer_cluster_data_distancebadchannel;
 std::vector<UShort_t> *fBuffer_cluster_data_nlm;
 std::vector<UShort_t> *fBuffer_cluster_data_clusterdef;
 std::vector<UShort_t> *fBuffer_cluster_data_matchedTrackN;
-std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackEta;
-std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackPhi;
+std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackDeltaEta;
+std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackDeltaPhi;
 std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackP;
+std::vector<uint8_t>  *fBuffer_cluster_data_matchedTrackSel;
 
 template<class T>
 void GetLeafValue (TTree *tree, const char* name, T& container) {
@@ -70,7 +71,7 @@ struct Track {
 // create cluster structure
 // energy, coreEnergy, rawEnergy, eta, phi, m02, m20, ncells, time, isexotic,
 // distancebadchannel, nlm, clusterdef, leadcellenergy, subleadcellenergy,
-// leadingcellnumber, subleadingcellnumber, matchedTrackN, matchedTrackPhi, matchedTrackEta
+// leadingcellnumber, subleadingcellnumber, matchedTrackN, matchedTrackDeltaPhi, matchedTrackDeltaEta, matchedTrackP, matchedTrackSel
 struct Cluster {
   Float_t energy;
   Float_t coreEnergy;
@@ -90,9 +91,10 @@ struct Cluster {
   Int_t leadingcellnumber;
   Int_t subleadingcellnumber;
   Int_t matchedTrackN = 0;
-  std::vector<Double_t> matchedTrackEta;
-  std::vector<Double_t> matchedTrackPhi;
+  std::vector<Double_t> matchedTrackDeltaEta;
+  std::vector<Double_t> matchedTrackDeltaPhi;
   std::vector<Double_t> matchedTrackP;
+  std::vector<uint8_t> matchedTrackSel;
 
   void build(TTree *tree) {
     GetLeafValue(tree, "fEnergy", energy);
@@ -115,7 +117,7 @@ struct Cluster {
   }
 
   void getMatchedTracks(const TTreeReaderArray<Int_t> &matchedTrackIdxs,
-                        const std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t>>& matchedTrackMap) {
+                        const std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t, uint8_t>>& matchedTrackMap) {
     // if no matched tracks, skip (number of matched set to zero already)
     if (matchedTrackIdxs.IsEmpty()) {
       return;
@@ -129,9 +131,10 @@ struct Cluster {
         std::cerr << "Matched track not found in map" << std::endl;
         assert(false);
       }
-      matchedTrackEta.push_back(std::get<0>(it->second));
-      matchedTrackPhi.push_back(std::get<1>(it->second));
-      matchedTrackP  .push_back(std::get<2>(it->second));
+      matchedTrackDeltaEta.push_back(std::get<0>(it->second) - eta);
+      matchedTrackDeltaPhi.push_back(std::get<1>(it->second) - phi);
+      matchedTrackP       .push_back(std::get<2>(it->second));
+      matchedTrackSel     .push_back(std::get<3>(it->second));
     }
   }
 };
@@ -188,7 +191,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // map of collision index -> cluster indices for collision
   std::unordered_map<int, std::vector<int>> clusterMap;
   // map of track index of matched tracks -> track's etaEMCAL, phiEMCAL, momentum
-  std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t>> matchedTrackMap;
+  std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t, uint8_t>> matchedTrackMap;
 
   TTreeReaderArray<Int_t> matchedTrackIdxs(*clustertracks, "fIndexArrayJTracks");
 
@@ -230,11 +233,13 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   while (emctracks->Next()) {
     tracks->GetEntry(*trackIdx);
     Float_t trackPt, trackEta, trackP;
+    uint8_t trackSel;
     GetLeafValue(tracks, "fPt", trackPt);
     GetLeafValue(tracks, "fEta", trackEta);
+    GetLeafValue(tracks, "fTrackSel", trackSel);
     trackP = trackPt * cosh(trackEta);
     // map each track index to its etaEMCAL, phiEMCAL, and momentum
-    matchedTrackMap.try_emplace(*trackIdx, *eta, *phi, trackP);
+    matchedTrackMap.try_emplace(*trackIdx, *eta, *phi, trackP, trackSel);
   }
 
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
