@@ -154,8 +154,8 @@ struct Collision {
     GetLeafValue(tree, "fPosX", posx);
     GetLeafValue(tree, "fPosY", posy);
     GetLeafValue(tree, "fPosZ", posz);
-    GetLeafValue(tree, "fMultiplicity", multiplicity);
-    GetLeafValue(tree, "fCentrality", centrality);
+    GetLeafValue(tree, "fMultFT0C", multiplicity);
+    GetLeafValue(tree, "fCentFT0C", centrality);
     GetLeafValue(tree, "fEventSel", eventsel);
     GetLeafValue(tree, "fTriggerSel", triggersel);
     GetLeafValue(tree, "fTrackOccupancyInTimeRange", trackOccupancyInTimeRange);
