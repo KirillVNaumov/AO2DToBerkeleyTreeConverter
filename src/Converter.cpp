@@ -157,9 +157,9 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
       fBuffer_cluster_data_clusterdef->push_back((UShort_t)cl.clusterdef);
       fBuffer_cluster_data_matchedTrackN->push_back(
           (UShort_t)cl.matchedTrackN);
-      fBuffer_cluster_data_matchedTrackEta->push_back(cl.matchedTrackEta);
-      fBuffer_cluster_data_matchedTrackPhi->push_back(cl.matchedTrackPhi);
-      fBuffer_cluster_data_matchedTrackP->push_back(cl.matchedTrackP);
+      fBuffer_cluster_data_matchedTrackEta->insert(fBuffer_cluster_data_matchedTrackEta->end(), cl.matchedTrackEta.begin(), cl.matchedTrackEta.end());
+      fBuffer_cluster_data_matchedTrackPhi->insert(fBuffer_cluster_data_matchedTrackPhi->end(), cl.matchedTrackPhi.begin(), cl.matchedTrackPhi.end());
+      fBuffer_cluster_data_matchedTrackP->insert(fBuffer_cluster_data_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
     }
 
     // fill tree
