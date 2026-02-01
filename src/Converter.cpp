@@ -222,6 +222,7 @@ void Converter::processFile(TFile *file) {
   // loop over all directories and print name
   TIter next(file->GetListOfKeys());
   TKey *key;
+  int count = 0;
   while ((key = (TKey *)next())) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
@@ -261,6 +262,9 @@ void Converter::processFile(TFile *file) {
 
     // delete all events
     events.clear();
+    count++;
   }
-  std::cout << "Total number of events: " << totalNumberOfEvents << std::endl;
+
+  std::cout << "Total DFs: " << count << std::endl;
+  std::cout << "Total events: " << totalNumberOfEvents << std::endl;
 }
