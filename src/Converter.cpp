@@ -69,7 +69,7 @@ void Converter::createTree() {
                      &fBuffer_cluster_data_matchedTrackPhi);
   outputTree->Branch("cluster_data_matchedTrackP",
                      &fBuffer_cluster_data_matchedTrackP);
-  outputTree->SetDirectory(0);
+  // outputTree->SetDirectory(0);
 }
 
 void Converter::clearBuffers() {

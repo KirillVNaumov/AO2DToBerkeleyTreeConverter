@@ -93,13 +93,12 @@ public:
   }
 
   ~Converter() {
-    // outFile->cd();
-    // loop overput hists and write to file
-    outFile->WriteTObject(outputTree);
+    outFile->cd();
+    outputTree->Write("", TObject::kOverwrite);
     if (_createHistograms) {
-      outFile->WriteTObject(outputhists);
+      outputhists->Write();
     }
-    outFile->Close();  
+    outFile->Close();
   }
 };
 
