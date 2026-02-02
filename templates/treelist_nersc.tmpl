@@ -5,10 +5,56 @@
 #SBATCH --account=alice
 #SBATCH --job-name=makelist
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --time=00:30:00
+#SBATCH --time=00:05:00
 #SBATCH --output={{SLURM_OUT}}/slurm-treelist-%A.out
 
+output={{OUTPUT}}
+tree_fname={{TREE_FNAME}}
+tree_list={{OUTPUT}}/tree_list.txt
+root_pack={{ROOT_PACK}}
 
-find {{OUTPUT}} \
-    -type f -name {{TREE_NAME}} \
-    > {{TREE_LIST}}
+find $output \
+    -type f -name $tree_fname \
+    > $tree_list
+
+tstruct=$output/tstruct.yaml
+
+# Check that tree list was built successfully
+if [ ! -f $tree_list ]; then
+    echo "Tree list $tree_list not found!"
+    exit 1
+fi
+
+tree_file=$(head -n 1 "$tree_list")
+
+# Check if ROOT file exists
+if [ ! -f "$tree_file" ]; then
+    echo "Could not find ROOT file at: $tree_file"
+    exit 1
+fi
+
+cmd="shifter --image=tch285/o2alma:latest --module=cvmfs \
+    /cvmfs/alice.cern.ch/bin/alienv setenv $root_pack -c"
+
+# Get the name of the TTree
+tree_name=$($cmd rootls -l "$tree_file" | grep "TTree" | head -n 1 | awk '{print $6}' | cut -d';' -f1)
+
+if [ -z "$tree_name" ]; then
+    echo "Error: No TTree found in $tree_file"
+    exit 1
+fi
+
+# Start writing YAML file
+echo "$tree_name:" > "$tstruct"
+echo "  branches:" >> "$tstruct"
+
+# Get branch names using rootls and format as YAML list
+$cmd rootls -t "$tree_file:$tree_name" | tail -n +2 | while read -r line; do
+    if [[ ! $line == *\"*\"* ]]; then
+        continue
+    fi
+    branch=$(echo "$line" | cut -d' ' -f1)
+    echo "  - $branch" >> $tstruct
+done
+
+echo "Branch names for TTree '$tree_name' written to: $tstruct"

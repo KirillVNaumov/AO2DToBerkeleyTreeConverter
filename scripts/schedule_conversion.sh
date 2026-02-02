@@ -150,12 +150,10 @@ else
     treecmd="sbatch --dependency=afterok:$conv_id"
 fi
 
-tree_list=$output/tree_list.txt
-
 sed -e "s|{{OUTPUT}}|$output|g" \
     -e "s|{{SLURM_OUT}}|$slurm_out|g" \
-    -e "s|{{TREE_NAME}}|$tree_name|g" \
-    -e "s|{{TREE_LIST}}|$tree_list|g" \
+    -e "s|{{TREE_FNAME}}|$tree_name|g" \
+    -e "s|{{ROOT_PACK}}|$root_pack|g" \
     "$project_root/templates/treelist_nersc.tmpl" > "$output/treelist.sh"
 
 $treecmd "$output/treelist.sh"
