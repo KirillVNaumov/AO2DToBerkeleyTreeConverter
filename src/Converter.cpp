@@ -51,7 +51,7 @@ void Converter::createTree() {
   outputTree->Branch("track_data_sel", &fBuffer_track_data_sel);
 
   // cluster
-  if (_saveClusters) {
+  if (saveClusters) {
     outputTree->Branch("cluster_data_energy", &fBuffer_cluster_data_energy);
     outputTree->Branch("cluster_data_eta", &fBuffer_cluster_data_eta);
     outputTree->Branch("cluster_data_phi", &fBuffer_cluster_data_phi);
@@ -79,7 +79,7 @@ void Converter::clearBuffers() {
   fBuffer_track_data_label->clear();
   fBuffer_track_data_sel->clear();
 
-  if (_saveClusters) {
+  if (saveClusters) {
     fBuffer_cluster_data_energy->clear();
     fBuffer_cluster_data_eta->clear();
     fBuffer_cluster_data_phi->clear();
@@ -107,7 +107,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
 
     // CHECK: does this actually do anything? if so, have to be careful of
     // what happens to matched tracks
-    if (_saveClusters && treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
+    if (saveClusters && treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
         if (cl.energy > treecuts["event_cuts"]["min_clus_E"].as<float>()) {
@@ -146,7 +146,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     }
 
     // fill cluster properties
-    if (_saveClusters) {
+    if (saveClusters) {
       for (auto &cl : ev.clusters) {
         fBuffer_cluster_data_energy->push_back((Float_t)cl.energy);
         fBuffer_cluster_data_eta->push_back((Float_t)cl.eta);
@@ -234,21 +234,21 @@ void Converter::processFile(TFile *file) {
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
     TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
-    if (_saveClusters && O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
+    if (saveClusters && O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
     TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
-    if (_saveClusters && O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
+    if (saveClusters && O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     if (!O2jcollision) throw std::runtime_error("TTree O2jcollision could not be found in file.");
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
     if (!O2jtrack) throw std::runtime_error("TTree O2jtrack could not be found in file.");
     TTree *O2jcluster = (TTree *)dir->Get("O2jcluster");
-    if (_saveClusters && !O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
+    if (saveClusters && !O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
     TTree *O2jbc = (TTree *)dir->Get("O2jbc");
     if (!O2jbc) throw std::runtime_error("TTree O2jbc could not be found in file.");
 
     // build event
     events =
-        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack, _saveClusters);
+        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack, saveClusters);
 
     logDebug("Event size: ", events.size());
     totalNumberOfEvents += events.size();
@@ -256,7 +256,7 @@ void Converter::processFile(TFile *file) {
     // do event selection
     doEventSelection(events);
 
-    if (_createHistograms)
+    if (createHistograms)
       doAnalysis(events);
 
     // write events to TTree

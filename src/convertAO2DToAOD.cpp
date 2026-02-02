@@ -5,27 +5,26 @@
 #include "Converter.hpp"
 #include "logger.hpp"
 
-void convertAO2DtoAOD(TString inputFileList = "",
-                      TString outputFileName = "output/test.root",
+void convertAO2DtoAOD(TString inputFilelist = "",
+                      TString outputFilename = "output/test.root",
                       TString configFile = "treeCuts.yaml",
-                      Bool_t createHistograms = false,
-                      Bool_t isPbPb = kFALSE,
-                      Bool_t isMC = kFALSE,
-                      Bool_t saveClusters = kFALSE
+                      bool createHistograms = false,
+                      bool saveClusters = false,
+                      bool isMC = false
                     ) {
 
-  // loop over all files in txt file fileList
-  std::vector<TString> fileList;
-  std::ifstream file(inputFileList.Data());
+  // loop over all files in txt file filelist
+  std::vector<TString> filelist;
+  std::ifstream file(inputFilelist.Data());
   std::string str;
   while (std::getline(file, str)) {
-    fileList.push_back(str);
+    filelist.push_back(str);
   }
 
-  Converter c(outputFileName.Data(), configFile.Data(), createHistograms, isPbPb, isMC, saveClusters);
+  Converter c(outputFilename.Data(), configFile.Data(), createHistograms, saveClusters, isMC);
 
-  for (size_t i = 0; i < fileList.size(); i++) {
-    TString filePath = fileList.at(i);
+  for (size_t i = 0; i < filelist.size(); i++) {
+    TString filePath = filelist.at(i);
     std::cout << "-> Processing file " << filePath << std::endl;
     TFile *in = new TFile(filePath.Data());
     if (!in) std::runtime_error("TFile " + filePath + "not found!");
@@ -40,13 +39,12 @@ int main(int argc, char **argv) {
     ArgumentParser parser;
     parser.parse(argc, argv);
     convertAO2DtoAOD(
-        /*inputFileList = */ parser.inputFileList,
-        /*outputFileName = */ parser.outputFileName,
+        /*inputFilelist = */ parser.inputFilelist,
+        /*outputFilename = */ parser.outputFilename,
         /*configFile = */ parser.configFile,
         /*createHistograms = */ parser.createHistograms,
-        /*isPbPb = */ parser.isPbPb,
-        /*isMC = */ parser.isMC,
-        /*saveClusters = */ parser.saveClusters);
+        /*saveClusters = */ parser.saveClusters,
+        /*isMC = */ parser.isMC);
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
     return code;

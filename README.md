@@ -33,12 +33,13 @@ To build the converter binary, you can simply run `make` in the root of the repo
 
 ```bash
 ./bin/converter [args]
-  --inputFileList=<file>, -i <file>  : Text file list of input AO2D files to be converted
-  --outputFileName=<file>, -o <file> : Path to the output BerkeleyTree ROOT file
-  --configFile=<file>, -c <file>     : YAML file containing cuts to be implemented on the converted data
-  --createHistograms                 : Build QA histograms from the converted data
-  --isPbPb                           : The data is from PbPb runs (currently just a placeholder)
-  --isMC                             : The data is produced from Monte Carlo Simulation (currently just a placeholder)
+  --input-filelist=<file>, -i <file>  : Text file list of input AO2D files to be converted
+  --output-filename=<file>, -o <file> : Path to the output BerkeleyTree ROOT file (default: BerkeleyTree.root)
+  --config-file=<file>, -c <file>     : YAML file containing cuts to be implemented on the converted data (default: tree-cuts.yaml)
+  --create-histograms                 : Build QA histograms from the converted data
+  --save-clusters                     : Save cluster information
+  --is-mc                             : The data is produced from Monte Carlo Simulation (currently just a placeholder)
+  -v, -vv                             : Increase verbosity; -v is INFO, and -vv or higher is DEBUG
 ```
 
 ## Usage

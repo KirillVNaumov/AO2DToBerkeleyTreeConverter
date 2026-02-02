@@ -54,7 +54,7 @@ while true; do
         -o | --output )    output="$2"; shift 2 ;;
         --aod-name )       aod_name="$2"; shift 2 ;;
         --tree-name )      tree_name="$2"; shift 2 ;;
-        --save-clusters )  cluster_opt="--saveClusters"; shift ;;
+        --save-clusters )  cluster_opt="--save-clusters"; shift ;;
         -n | --nfiles )    nfiles_per_tree="$2"; shift 2 ;;
         -c | --config )    config="$2"; shift 2 ;;
         -r | --root-pack ) root_pack="$2"; shift 2 ;;

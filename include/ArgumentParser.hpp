@@ -10,23 +10,21 @@
 
 class ArgumentParser {
 public:
-  std::string inputFileList;
-  std::string outputFileName = "AOD.root";
-  std::string configFile = "treeCuts.yaml";
+  std::string inputFilelist;
+  std::string outputFilename = "BerkeleyTree.root";
+  std::string configFile = "tree-cuts.yaml";
   bool createHistograms = false;
-  bool isPbPb = false;
-  bool isMC = false;
   bool saveClusters = false;
+  bool isMC = false;
 
   void displayHelp() {
     std::cout << "./converter [args]" << std::endl;
-    std::cout << "\t--inputFileList=<file>, -i <file>  : input ROOT file in the AO2D format" << std::endl;
-    std::cout << "\t--outputFileName=<file>, -o <file> : output ROOT file in the BerkeleyTree format (default: \"AOD.root\")" << std::endl;
-    std::cout << "\t--configFile=<file>, -c <file>     : YAML files with cuts to be done to the converted data (default: \"treeCuts.yaml\")" << std::endl;
-    std::cout << "\t--createHistograms                 : Create histograms from the converted data" << std::endl;
-    std::cout << "\t--saveClusters                     : Save clusters" << std::endl;
-    std::cout << "\t--isPbPb                           : The data is from PbPb runs" << std::endl;
-    std::cout << "\t--isMC                             : The data is produced from Monte Carlo Simulation" << std::endl;
+    std::cout << "\t--input-filelist=<file>, -i <file>  : text file with paths to AO2Ds" << std::endl;
+    std::cout << "\t--output-filename=<file>, -o <file> : output ROOT file in the BerkeleyTree format (default: \"BerkeleyTree.root\")" << std::endl;
+    std::cout << "\t--config-file=<file>, -c <file>     : YAML files with cuts to be done to the converted data (default: \"tree-cuts.yaml\")" << std::endl;
+    std::cout << "\t--create-histograms                 : Create histograms from the converted data" << std::endl;
+    std::cout << "\t--save-clusters                     : Save clusters" << std::endl;
+    std::cout << "\t--is-mc                             : The data is produced from Monte Carlo Simulation" << std::endl;
   }
 
   void reportError(std::string error) {
@@ -70,29 +68,26 @@ public:
          ++iter) {
       std::string arg = *iter;
       logInfo("Arg: ", arg);
-      if (!arg.compare("-i") || !arg.compare("--inputFileList")) {
+      if (!arg.compare("-i") || !arg.compare("--input-filelist")) {
         if (++iter == canonical_args.end())
-          reportError("No input file list after -i/--inputFileList directive");
-        inputFileList = *iter;
-      } else if (!arg.compare("-o") || !arg.compare("--outputFileName")) {
+          reportError("No input file list after -i/--input-filelist directive");
+        inputFilelist = *iter;
+      } else if (!arg.compare("-o") || !arg.compare("--output-filename")) {
         if (++iter == canonical_args.end())
-          reportError(
-              "No output file name after -o/--outputFileName directive");
-        outputFileName = *iter;
-      } else if (!arg.compare("-c") || !arg.compare("--configFile")) {
+          reportError("No output file name after -o/--output-filename directive");
+        outputFilename = *iter;
+      } else if (!arg.compare("-c") || !arg.compare("--config-file")) {
         if (++iter == canonical_args.end())
-          reportError("No config file after -c/--configFile directive");
+          reportError("No config file after -c/--config-file directive");
         configFile = *iter;
-      } else if (!arg.compare("--createHistograms")) {
+      } else if (!arg.compare("--create-histograms")) {
         createHistograms = true;
-      } else if (!arg.compare("--saveClusters")) {
+      } else if (!arg.compare("--save-clusters")) {
         saveClusters = true;
+      } else if (!arg.compare("-is-mc")) {
+        isMC = true;
       } else if (iter->compare(0, 2, "-v") == 0) {
         ; // verbosity already parsed but avoid error
-      } else if (!arg.compare("-PbPb")) {
-        isPbPb = true;
-      } else if (!arg.compare("-MC")) {
-        isMC = true;
       } else if (!arg.compare("-h") || !arg.compare("--help")) {
         displayHelp();
         exit(1);
@@ -102,7 +97,7 @@ public:
     }
 
     logInfo("Verbosity level: ", getSeverity());
-    if (inputFileList.empty()) {
+    if (inputFilelist.empty()) {
       reportError("Input file list is not provided");
     }
   }

@@ -73,6 +73,7 @@ class Logger {
           break;
         default:
           logCritical("Logging level is at a strange value");
+          return "";
       }
     }
 };
