@@ -191,7 +191,6 @@ void Converter::doEventSelection(std::vector<Event> &events) {
 
 // can be used to do analysis (if needed)
 void Converter::doAnalysis(std::vector<Event> &events) {
-  assert(_createHistograms);
   for (auto &ev : events) {
     hNEvents->Fill(1);
     hEvtVtxX->Fill(ev.col.posX);
@@ -229,18 +228,17 @@ void Converter::processFile(TFile *file) {
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
     TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
-    // TTree *O2jclustertrack = (TTree *)dir->Get("O2jclustertrack");
-    assert(!O2jclustertrack->IsInvalid());
+    if (O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
     TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
-    assert(!O2jemctrack->IsInvalid());
+    if (O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
-    assert(O2jcollision);
+    if (!O2jcollision) throw std::runtime_error("TTree O2jcollision could not be found in file.");
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
-    assert(O2jtrack);
+    if (!O2jtrack) throw std::runtime_error("TTree O2jtrack could not be found in file.");
     TTree *O2jcluster = (TTree *)dir->Get("O2jcluster");
-    assert(O2jcluster);
+    if (!O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
     TTree *O2jbc = (TTree *)dir->Get("O2jbc");
-    assert(O2jbc);
+    if (!O2jbc) throw std::runtime_error("TTree O2jbc could not be found in file.");
 
     // build event
     events =

@@ -25,7 +25,7 @@ void convertAO2DtoAOD(TString inputFileList = "",
     TString filePath = fileList.at(i);
     std::cout << "-> Processing file " << filePath << std::endl;
     TFile *in = new TFile(filePath.Data());
-    assert(in);
+    if (!in) std::runtime_error("TFile " + filePath + "not found!");
     c.processFile(in);
     in->Close();
   }
@@ -45,6 +45,7 @@ int main(int argc, char **argv) {
         /*isMC = */ parser.isMC);
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
+    return code;
   }
   return 0;
 }
