@@ -11,19 +11,19 @@
 #include <TTreeReaderArray.h>
 
 // collision
-Int_t fBuffer_RunNumber;
+Int_t fBuffer_runNumber;
+uint16_t fBuffer_eventSel;
+uint64_t fBuffer_triggerSel;
+Int_t fBuffer_trackOccupancyInTimeRange;
 Float_t fBuffer_centrality;
 Float_t fBuffer_multiplicity;
-Int_t fBuffer_trackOccupancyInTimeRange;
-uint16_t fBuffer_eventselection;
-uint64_t fBuffer_triggersel;
 
 // track
 std::vector<Float_t>  *fBuffer_track_data_eta;
 std::vector<Float_t>  *fBuffer_track_data_phi;
 std::vector<Float_t>  *fBuffer_track_data_pt;
 std::vector<UShort_t> *fBuffer_track_data_label;
-std::vector<uint8_t>  *fBuffer_track_data_tracksel;
+std::vector<uint8_t>  *fBuffer_track_data_sel;
 
 // cluster
 std::vector<Float_t>  *fBuffer_cluster_data_energy;
@@ -33,10 +33,10 @@ std::vector<Float_t>  *fBuffer_cluster_data_m02;
 std::vector<Float_t>  *fBuffer_cluster_data_m20;
 std::vector<UShort_t> *fBuffer_cluster_data_ncells;
 std::vector<Float_t>  *fBuffer_cluster_data_time;
-std::vector<Bool_t>   *fBuffer_cluster_data_isexotic;
-std::vector<UShort_t> *fBuffer_cluster_data_distancebadchannel;
+std::vector<Bool_t>   *fBuffer_cluster_data_isExotic;
+std::vector<UShort_t> *fBuffer_cluster_data_distanceToBadChannel;
 std::vector<UShort_t> *fBuffer_cluster_data_nlm;
-std::vector<UShort_t> *fBuffer_cluster_data_clusterdef;
+std::vector<UShort_t> *fBuffer_cluster_data_definition;
 std::vector<UShort_t> *fBuffer_cluster_data_matchedTrackN;
 std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackDeltaEta;
 std::vector<Float_t>  *fBuffer_cluster_data_matchedTrackDeltaPhi;
@@ -70,8 +70,8 @@ struct Track {
 
 // create cluster structure
 // energy, coreEnergy, rawEnergy, eta, phi, m02, m20, ncells, time, isexotic,
-// distancebadchannel, nlm, clusterdef, leadcellenergy, subleadcellenergy,
-// leadingcellnumber, subleadingcellnumber, matchedTrackN, matchedTrackDeltaPhi, matchedTrackDeltaEta, matchedTrackP, matchedTrackSel
+// distanceToBadChannel, nlm, definition, leadcellenergy, subleadcellenergy,
+// leadcellnumber, subleadcellnumber, matchedTrackN, matchedTrackDeltaPhi, matchedTrackDeltaEta, matchedTrackP, matchedTrackSel
 struct Cluster {
   Float_t energy;
   Float_t coreEnergy;
@@ -82,19 +82,19 @@ struct Cluster {
   Float_t m20;
   Int_t ncells;
   Float_t time;
-  Bool_t isexotic;
-  Float_t distancebadchannel;
+  Bool_t isExotic;
+  Float_t distanceToBadChannel;
   Int_t nlm;
-  Int_t clusterdef;
-  Float_t leadcellenergy;
-  Float_t subleadcellenergy;
-  Int_t leadingcellnumber;
-  Int_t subleadingcellnumber;
+  Int_t definition;
+  Float_t leadCellEnergy;
+  Float_t subleadCellEnergy;
+  Int_t leadCellNumber;
+  Int_t subleadCellNumber;
   Int_t matchedTrackN = 0;
   std::vector<Double_t> matchedTrackDeltaEta;
   std::vector<Double_t> matchedTrackDeltaPhi;
   std::vector<Double_t> matchedTrackP;
-  std::vector<uint8_t> matchedTrackSel;
+  std::vector<uint8_t>  matchedTrackSel;
 
   void build(TTree *tree) {
     GetLeafValue(tree, "fEnergy", energy);
@@ -106,14 +106,14 @@ struct Cluster {
     GetLeafValue(tree, "fM20", m20);
     GetLeafValue(tree, "fNCells", ncells);
     GetLeafValue(tree, "fTime", time);
-    GetLeafValue(tree, "fIsExotic", isexotic);
-    GetLeafValue(tree, "fDistanceToBadChannel", distancebadchannel);
+    GetLeafValue(tree, "fIsExotic", isExotic);
+    GetLeafValue(tree, "fDistanceToBadChannel", distanceToBadChannel);
     GetLeafValue(tree, "fNLM", nlm);
-    GetLeafValue(tree, "fDefinition", clusterdef);
-    GetLeafValue(tree, "fLeadingCellEnergy", leadcellenergy);
-    GetLeafValue(tree, "fSubleadingCellEnergy", subleadcellenergy);
-    GetLeafValue(tree, "fLeadingCellNumber", leadingcellnumber);
-    GetLeafValue(tree, "fSubleadingCellNumber", subleadingcellnumber);
+    GetLeafValue(tree, "fDefinition", definition);
+    GetLeafValue(tree, "fLeadingCellEnergy", leadCellEnergy);
+    GetLeafValue(tree, "fSubleadingCellEnergy", subleadCellEnergy);
+    GetLeafValue(tree, "fLeadingCellNumber", leadCellNumber);
+    GetLeafValue(tree, "fSubleadingCellNumber", subleadCellNumber);
   }
 
   void getMatchedTracks(const TTreeReaderArray<Int_t> &matchedTrackIdxs,
@@ -140,27 +140,27 @@ struct Cluster {
 };
 
 // collision structure
-// posx, posy, posz, multiplicity, centrality, eventsel
+// vertex position, multiplicity, centrality, occupancy, event selection, trigger selection
 struct Collision {
   Int_t runNumber;
-  Float_t posx;
-  Float_t posy;
-  Float_t posz;
+  Float_t posX;
+  Float_t posY;
+  Float_t posZ;
   Float_t multiplicity;
   Float_t centrality;
   Int_t trackOccupancyInTimeRange;
-  uint16_t eventsel; // this should be a uint16_t
-  uint64_t triggersel;
+  uint16_t eventSel; // this should be a uint16_t
+  uint64_t triggerSel;
 
   void build(TTree *tree) {
     // fill collision
-    GetLeafValue(tree, "fPosX", posx);
-    GetLeafValue(tree, "fPosY", posy);
-    GetLeafValue(tree, "fPosZ", posz);
+    GetLeafValue(tree, "fPosX", posX);
+    GetLeafValue(tree, "fPosY", posY);
+    GetLeafValue(tree, "fPosZ", posZ);
     GetLeafValue(tree, "fMultFT0C", multiplicity);
     GetLeafValue(tree, "fCentFT0C", centrality);
-    GetLeafValue(tree, "fEventSel", eventsel);
-    GetLeafValue(tree, "fTriggerSel", triggersel);
+    GetLeafValue(tree, "fEventSel", eventSel);
+    GetLeafValue(tree, "fTriggerSel", triggerSel);
     GetLeafValue(tree, "fTrackOccupancyInTimeRange", trackOccupancyInTimeRange);
   }
 };
@@ -227,19 +227,19 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // check that we have exactly one clustertrack entry for each cluster
   assert(clusters->GetEntries() == clustertracks->GetEntries());
 
-  TTreeReaderValue<Int_t> trackIdx(*emctracks, "fIndexJTracks");
+  TTreeReaderValue<Int_t> matchedTrackIdx(*emctracks, "fIndexJTracks");
   TTreeReaderValue<Float_t> phi(*emctracks, "fPhiEMCAL");
   TTreeReaderValue<Float_t> eta(*emctracks, "fEtaEMCAL");
   while (emctracks->Next()) {
-    tracks->GetEntry(*trackIdx);
-    Float_t trackPt, trackEta, trackP;
-    uint8_t trackSel;
-    GetLeafValue(tracks, "fPt", trackPt);
-    GetLeafValue(tracks, "fEta", trackEta);
-    GetLeafValue(tracks, "fTrackSel", trackSel);
-    trackP = trackPt * cosh(trackEta);
+    tracks->GetEntry(*matchedTrackIdx);
+    Float_t matchedTrackPt, matchedTrackEta, matchedTrackP;
+    uint8_t matchedTrackSel;
+    GetLeafValue(tracks, "fPt", matchedTrackPt);
+    GetLeafValue(tracks, "fEta", matchedTrackEta);
+    GetLeafValue(tracks, "fTrackSel", matchedTrackSel);
+    matchedTrackP = matchedTrackPt * cosh(matchedTrackEta);
     // map each track index to its etaEMCAL, phiEMCAL, and momentum
-    matchedTrackMap.try_emplace(*trackIdx, *eta, *phi, trackP, trackSel);
+    matchedTrackMap.try_emplace(*matchedTrackIdx, *eta, *phi, matchedTrackP, matchedTrackSel);
   }
 
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
