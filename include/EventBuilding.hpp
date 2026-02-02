@@ -1,7 +1,7 @@
 #ifndef _eventbuilding_h_included
 #define _eventbuilding_h_included
 
-#include "debug.hpp"
+#include "logger.hpp"
 
 #include <unordered_map>
 #include <cmath>
@@ -181,7 +181,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // print track table
   //   clusters->Print();
   // loop over collisions
-  DEBUG("-> Looping over " << collisions->GetEntries() << " collisions")
+  logDebug("-> Looping over ", collisions->GetEntries(), " collisions");
 
   // map of collision index -> track indices for collision
   std::unordered_map<int, std::vector<int>> trackMap;
@@ -237,7 +237,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
     // add this collision to event
     ev.col.build(collisions);
 
-    // DEBUG("Number of tracks: " << trackMap[idxCol].size())
+    // logDebug("Number of tracks: ", trackMap[idxCol].size());
     // loop through global indices of tracks (idxTrack) for this collision
     for(const int& idxTrack : trackMap[idxCol]) {
       tracks->GetEntry(idxTrack);
@@ -252,7 +252,7 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
     }
 
     if (saveClusters) {
-      // DEBUG("Number of clusters: " << clusterMap[idxCol].size())
+      // logDebug("Number of clusters: ", clusterMap[idxCol].size());
       // loop through global indices of clusters (idxCluster) for this collision
       for(const int& idxCluster : clusterMap[idxCol]) {
         clusters->GetEntry(idxCluster);

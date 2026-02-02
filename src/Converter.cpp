@@ -250,7 +250,7 @@ void Converter::processFile(TFile *file) {
     events =
         buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack, _saveClusters);
 
-    DEBUG("Event size: " << events.size())
+    logDebug("Event size: ", events.size());
     totalNumberOfEvents += events.size();
 
     // do event selection

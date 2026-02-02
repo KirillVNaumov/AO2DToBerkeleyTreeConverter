@@ -38,10 +38,6 @@ LIB         += -lyaml-cpp
 # DO NOT EDIT BELOW THIS LINE
 #---------------------------------------------------------------------------------
 
-ifeq ($(BUILD),product)
-  CFLAGS    += -DNDEBUG
-endif
-
 SOURCES     := $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 OBJECTS     := $(patsubst $(SRCDIR)/%,$(BUILDDIR)/%,$(SOURCES:.$(SRCEXT)=.$(OBJEXT)))
 

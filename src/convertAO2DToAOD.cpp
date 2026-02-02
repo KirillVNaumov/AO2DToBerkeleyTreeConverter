@@ -3,7 +3,7 @@
 
 #include "ArgumentParser.hpp"
 #include "Converter.hpp"
-#include "debug.hpp"
+#include "logger.hpp"
 
 void convertAO2DtoAOD(TString inputFileList = "",
                       TString outputFileName = "output/test.root",

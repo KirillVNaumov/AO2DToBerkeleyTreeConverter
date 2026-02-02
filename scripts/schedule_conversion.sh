@@ -14,6 +14,7 @@ Options:
   -n, --nfiles NFILES   Set number of AO2Ds per converted tree (default: 10)
   -c, --config CONFIG   Set tree configuration YAML file (default: tree-cuts.yaml in project root)
   -e, --email EMAIL     Request slurm to send email notifications to EMAIL at start and end (default: false)
+  -v, --verbose         Increase verbosity level. -v is INFO and -vv or higher is DEBUG. (default: WARNING)
   -t, --test            Run conversion in test mode (default: false)
   -h, --help            Show this help message
 
@@ -25,8 +26,8 @@ cd "$project_root/scripts"
 . util.sh
 
 # using GNU getopt in place of Python argparse
-PARSEDARGS=$(getopt -o p:i:o:n:c:r:e:th \
-                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,root-pack:,email:,save-clusters,test,help \
+PARSEDARGS=$(getopt -o p:i:o:n:c:r:e:vth \
+                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,root-pack:,email:,save-clusters,verbose,test,help \
                     -n 'conversion-scheduler' -- "$@")
 PARSE_EXIT=$?
 if [ $PARSE_EXIT -ne 0 ] ; then exit $PARSE_EXIT ; fi
@@ -44,6 +45,7 @@ nfiles_per_tree=
 config=
 root_pack=
 email=
+verb_level=0
 test=false
 while true; do
     case "$1" in
@@ -57,6 +59,7 @@ while true; do
         -c | --config )    config="$2"; shift 2 ;;
         -r | --root-pack ) root_pack="$2"; shift 2 ;;
         -e | --email )     email="$2"; shift 2 ;;
+        -v | --verbose )   (( verb_level++ )); shift ;;
         -t | --test )      test="true"; shift ;;
         -h | --help )      show_help; exit 0 ;;
         -- ) shift; break ;;
@@ -80,6 +83,13 @@ done
 [ ! -f "$config" ] && error "Configuration file '$config' not found." && exit 1
 [ -z "$root_pack" ] && error "ROOT package not set." && exit 1
 
+# set verbosity
+case $verb_level in
+    0) verbosity="WARNING"; verb_opt="" ;;    # WARNING
+    1) verbosity="INFO";    verb_opt="-v" ;;  # INFO
+    *) verbosity="DEBUG";   verb_opt="-vv" ;; # DEBUG
+esac
+
 settings=$(cat << EOF
 Beginning conversion. Your conversion settings:
     Converter path: $converter_path
@@ -91,6 +101,7 @@ Beginning conversion. Your conversion settings:
     Number of files per tree: $nfiles_per_tree
     Config file: $config
     ROOT package: $root_pack
+    Verbosity: $verbosity
     Email: $email
     Test mode: $test
 EOF
@@ -142,11 +153,14 @@ sed -e "s|{{NJOBS}}|$njobs|g" \
     -e "s|{{TREE_NAME}}|$tree_name|g" \
     -e "s|{{CLUSTER_OPT}}|$cluster_opt|g" \
     -e "s|{{CONVERTER_PATH}}|$converter_path|g" \
+    -e "s|{{VERBOSITY}}|$verb_opt|g" \
     -e "s|{{ROOT_PACK}}|$root_pack|g" \
     "$project_root/templates/convert_nersc.tmpl" > "$output/convert.sh"
 
 if [ $test == "true" ]; then
     $convcmd "$output/convert.sh"
+    ecode_conv=$?
+    if [[ $ecode_conv -ne 0 ]]; then error "Test conversion crashed, exiting." && exit $ecode_conv; fi
     treecmd=/usr/bin/bash
 else
     conv_id=$( $convcmd "$output/convert.sh" )

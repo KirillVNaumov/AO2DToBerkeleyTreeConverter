@@ -65,14 +65,14 @@ download=
 convert=
 testopt=
 clusteropt=$( [ -n "$SAVECLUSTERS" ] && echo "--save-clusters" )
-buildopt=( "-C" "$PROJECT_ROOT" )
+verb_level=0
 
 while true; do
     case "$1" in
         -d | --download ) download="true"; shift ;;
         -c | --convert )  convert="true"; shift ;;
         -t | --test )     testopt="--test"; shift ;;
-        -v | --verbose )  buildopt+=("BUILD=debug"); shift ;;
+        -v | --verbose )  (( verb_level++ )); shift ;;
         -h | --help )     show_help; exit 0 ;;
         -- ) shift; break ;;
         * ) break ;;
@@ -136,12 +136,19 @@ fi
 if [ -n "$convert" ]; then
     check_cmd shifter
 
+    # set verbosity
+    case $verb_level in
+        0) verbopt="" ;; # WARNING
+        1) verbopt="-v" ;; # INFO
+        *) verbopt="-vv" ;; # DEBUG
+    esac
+
     # Compile the converter
     pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
-        make remake "${buildopt[@]}"
-        # make cleaner "${buildopt[@]}"
+        make remake -C "$PROJECT_ROOT"
+        # make cleaner -C "$PROJECT_ROOT"
     # pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
-    #     make "${buildopt[@]}"
+    #     make -C "$PROJECT_ROOT"
     check_exit $? "Compilation failed!"
 
     # Schedules sbatch jobs to convert a number of AO2Ds found
@@ -154,6 +161,7 @@ if [ -n "$convert" ]; then
         -c "$CONFIG" \
         -e "$EMAIL" \
         -r "$ROOT_PACK" \
+        "$verbopt" \
         "$clusteropt" \
         "$testopt"
     check_exit $? "Conversion failed!"
