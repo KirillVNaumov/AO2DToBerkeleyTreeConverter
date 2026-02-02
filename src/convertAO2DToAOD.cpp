@@ -8,8 +8,11 @@
 void convertAO2DtoAOD(TString inputFileList = "",
                       TString outputFileName = "output/test.root",
                       TString configFile = "treeCuts.yaml",
-                      Bool_t createHistograms = false, Bool_t isPbPb = kFALSE,
-                      Bool_t isMC = kFALSE) {
+                      Bool_t createHistograms = false,
+                      Bool_t isPbPb = kFALSE,
+                      Bool_t isMC = kFALSE,
+                      Bool_t saveClusters = kFALSE
+                    ) {
 
   // loop over all files in txt file fileList
   std::vector<TString> fileList;
@@ -19,7 +22,7 @@ void convertAO2DtoAOD(TString inputFileList = "",
     fileList.push_back(str);
   }
 
-  Converter c(outputFileName.Data(), configFile.Data(), createHistograms);
+  Converter c(outputFileName.Data(), configFile.Data(), createHistograms, isPbPb, isMC, saveClusters);
 
   for (size_t i = 0; i < fileList.size(); i++) {
     TString filePath = fileList.at(i);
@@ -42,7 +45,8 @@ int main(int argc, char **argv) {
         /*configFile = */ parser.configFile,
         /*createHistograms = */ parser.createHistograms,
         /*isPbPb = */ parser.isPbPb,
-        /*isMC = */ parser.isMC);
+        /*isMC = */ parser.isMC,
+        /*saveClusters = */ parser.saveClusters);
   } catch (int code) {
     std::cout << "Exception caught: " << code << std::endl;
     return code;

@@ -28,6 +28,7 @@ OUTPUT_DIR="$STAGING/LHC22o_test"
 
 EMAIL=
 NAOD=15
+SAVECLUSTERS=
 
 #### ---------- RUNTIME PARAMETERS ---------- #####
 
@@ -63,6 +64,7 @@ eval set -- "$PARSEDARGS"
 download=
 convert=
 testopt=
+clusteropt=$( [ -n "$SAVECLUSTERS" ] && echo "--save-clusters" )
 buildopt=( "-C" "$PROJECT_ROOT" )
 
 while true; do
@@ -152,6 +154,7 @@ if [ -n "$convert" ]; then
         -c "$CONFIG" \
         -e "$EMAIL" \
         -r "$ROOT_PACK" \
+        "$clusteropt" \
         "$testopt"
     check_exit $? "Conversion failed!"
 else

@@ -51,22 +51,24 @@ void Converter::createTree() {
   outputTree->Branch("track_data_sel", &fBuffer_track_data_sel);
 
   // cluster
-  outputTree->Branch("cluster_data_energy", &fBuffer_cluster_data_energy);
-  outputTree->Branch("cluster_data_eta", &fBuffer_cluster_data_eta);
-  outputTree->Branch("cluster_data_phi", &fBuffer_cluster_data_phi);
-  outputTree->Branch("cluster_data_m02", &fBuffer_cluster_data_m02);
-  outputTree->Branch("cluster_data_m20", &fBuffer_cluster_data_m20);
-  outputTree->Branch("cluster_data_ncells", &fBuffer_cluster_data_ncells);
-  outputTree->Branch("cluster_data_time", &fBuffer_cluster_data_time);
-  outputTree->Branch("cluster_data_exoticity", &fBuffer_cluster_data_isExotic);
-  outputTree->Branch("cluster_data_dbc", &fBuffer_cluster_data_distanceToBadChannel);
-  outputTree->Branch("cluster_data_nlm", &fBuffer_cluster_data_nlm);
-  outputTree->Branch("cluster_data_def", &fBuffer_cluster_data_definition);
-  outputTree->Branch("cluster_data_matched_track_n", &fBuffer_cluster_data_matchedTrackN);
-  outputTree->Branch("cluster_data_matched_track_delta_eta", &fBuffer_cluster_data_matchedTrackDeltaEta);
-  outputTree->Branch("cluster_data_matched_track_delta_phi", &fBuffer_cluster_data_matchedTrackDeltaPhi);
-  outputTree->Branch("cluster_data_matched_track_p", &fBuffer_cluster_data_matchedTrackP);
-  outputTree->Branch("cluster_data_matched_track_sel", &fBuffer_cluster_data_matchedTrackSel);
+  if (_saveClusters) {
+    outputTree->Branch("cluster_data_energy", &fBuffer_cluster_data_energy);
+    outputTree->Branch("cluster_data_eta", &fBuffer_cluster_data_eta);
+    outputTree->Branch("cluster_data_phi", &fBuffer_cluster_data_phi);
+    outputTree->Branch("cluster_data_m02", &fBuffer_cluster_data_m02);
+    outputTree->Branch("cluster_data_m20", &fBuffer_cluster_data_m20);
+    outputTree->Branch("cluster_data_ncells", &fBuffer_cluster_data_ncells);
+    outputTree->Branch("cluster_data_time", &fBuffer_cluster_data_time);
+    outputTree->Branch("cluster_data_exoticity", &fBuffer_cluster_data_isExotic);
+    outputTree->Branch("cluster_data_dbc", &fBuffer_cluster_data_distanceToBadChannel);
+    outputTree->Branch("cluster_data_nlm", &fBuffer_cluster_data_nlm);
+    outputTree->Branch("cluster_data_def", &fBuffer_cluster_data_definition);
+    outputTree->Branch("cluster_data_matched_track_n", &fBuffer_cluster_data_matchedTrackN);
+    outputTree->Branch("cluster_data_matched_track_delta_eta", &fBuffer_cluster_data_matchedTrackDeltaEta);
+    outputTree->Branch("cluster_data_matched_track_delta_phi", &fBuffer_cluster_data_matchedTrackDeltaPhi);
+    outputTree->Branch("cluster_data_matched_track_p", &fBuffer_cluster_data_matchedTrackP);
+    outputTree->Branch("cluster_data_matched_track_sel", &fBuffer_cluster_data_matchedTrackSel);
+  }
   // outputTree->SetDirectory(0);
 }
 
@@ -77,22 +79,24 @@ void Converter::clearBuffers() {
   fBuffer_track_data_label->clear();
   fBuffer_track_data_sel->clear();
 
-  fBuffer_cluster_data_energy->clear();
-  fBuffer_cluster_data_eta->clear();
-  fBuffer_cluster_data_phi->clear();
-  fBuffer_cluster_data_m02->clear();
-  fBuffer_cluster_data_m20->clear();
-  fBuffer_cluster_data_ncells->clear();
-  fBuffer_cluster_data_time->clear();
-  fBuffer_cluster_data_isExotic->clear();
-  fBuffer_cluster_data_distanceToBadChannel->clear();
-  fBuffer_cluster_data_nlm->clear();
-  fBuffer_cluster_data_definition->clear();
-  fBuffer_cluster_data_matchedTrackN->clear();
-  fBuffer_cluster_data_matchedTrackDeltaEta->clear();
-  fBuffer_cluster_data_matchedTrackDeltaPhi->clear();
-  fBuffer_cluster_data_matchedTrackP->clear();
-  fBuffer_cluster_data_matchedTrackSel->clear();
+  if (_saveClusters) {
+    fBuffer_cluster_data_energy->clear();
+    fBuffer_cluster_data_eta->clear();
+    fBuffer_cluster_data_phi->clear();
+    fBuffer_cluster_data_m02->clear();
+    fBuffer_cluster_data_m20->clear();
+    fBuffer_cluster_data_ncells->clear();
+    fBuffer_cluster_data_time->clear();
+    fBuffer_cluster_data_isExotic->clear();
+    fBuffer_cluster_data_distanceToBadChannel->clear();
+    fBuffer_cluster_data_nlm->clear();
+    fBuffer_cluster_data_definition->clear();
+    fBuffer_cluster_data_matchedTrackN->clear();
+    fBuffer_cluster_data_matchedTrackDeltaEta->clear();
+    fBuffer_cluster_data_matchedTrackDeltaPhi->clear();
+    fBuffer_cluster_data_matchedTrackP->clear();
+    fBuffer_cluster_data_matchedTrackSel->clear();
+  }
 }
 
 // write events to TTree
@@ -103,7 +107,7 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
 
     // CHECK: does this actually do anything? if so, have to be careful of
     // what happens to matched tracks
-    if (treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
+    if (_saveClusters && treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
         if (cl.energy > treecuts["event_cuts"]["min_clus_E"].as<float>()) {
@@ -142,25 +146,27 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     }
 
     // fill cluster properties
-    for (auto &cl : ev.clusters) {
-      fBuffer_cluster_data_energy->push_back((Float_t)cl.energy);
-      fBuffer_cluster_data_eta->push_back((Float_t)cl.eta);
-      fBuffer_cluster_data_phi->push_back((Float_t)cl.phi);
-      fBuffer_cluster_data_m02->push_back((Float_t)cl.m02);
-      fBuffer_cluster_data_m20->push_back((Float_t)cl.m20);
-      fBuffer_cluster_data_ncells->push_back((UShort_t)cl.ncells);
-      fBuffer_cluster_data_time->push_back((Float_t)cl.time);
-      fBuffer_cluster_data_isExotic->push_back((Bool_t)cl.isExotic);
-      fBuffer_cluster_data_distanceToBadChannel->push_back(
-          (UShort_t)cl.distanceToBadChannel);
-      fBuffer_cluster_data_nlm->push_back((UShort_t)cl.nlm);
-      fBuffer_cluster_data_definition->push_back((UShort_t)cl.definition);
-      fBuffer_cluster_data_matchedTrackN->push_back(
-          (UShort_t)cl.matchedTrackN);
-      fBuffer_cluster_data_matchedTrackDeltaEta->insert(fBuffer_cluster_data_matchedTrackDeltaEta->end(), cl.matchedTrackDeltaEta.begin(), cl.matchedTrackDeltaEta.end());
-      fBuffer_cluster_data_matchedTrackDeltaPhi->insert(fBuffer_cluster_data_matchedTrackDeltaPhi->end(), cl.matchedTrackDeltaPhi.begin(), cl.matchedTrackDeltaPhi.end());
-      fBuffer_cluster_data_matchedTrackP->insert(fBuffer_cluster_data_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
-      fBuffer_cluster_data_matchedTrackSel->insert(fBuffer_cluster_data_matchedTrackSel->end(), cl.matchedTrackSel.begin(), cl.matchedTrackSel.end());
+    if (_saveClusters) {
+      for (auto &cl : ev.clusters) {
+        fBuffer_cluster_data_energy->push_back((Float_t)cl.energy);
+        fBuffer_cluster_data_eta->push_back((Float_t)cl.eta);
+        fBuffer_cluster_data_phi->push_back((Float_t)cl.phi);
+        fBuffer_cluster_data_m02->push_back((Float_t)cl.m02);
+        fBuffer_cluster_data_m20->push_back((Float_t)cl.m20);
+        fBuffer_cluster_data_ncells->push_back((UShort_t)cl.ncells);
+        fBuffer_cluster_data_time->push_back((Float_t)cl.time);
+        fBuffer_cluster_data_isExotic->push_back((Bool_t)cl.isExotic);
+        fBuffer_cluster_data_distanceToBadChannel->push_back(
+            (UShort_t)cl.distanceToBadChannel);
+        fBuffer_cluster_data_nlm->push_back((UShort_t)cl.nlm);
+        fBuffer_cluster_data_definition->push_back((UShort_t)cl.definition);
+        fBuffer_cluster_data_matchedTrackN->push_back(
+            (UShort_t)cl.matchedTrackN);
+        fBuffer_cluster_data_matchedTrackDeltaEta->insert(fBuffer_cluster_data_matchedTrackDeltaEta->end(), cl.matchedTrackDeltaEta.begin(), cl.matchedTrackDeltaEta.end());
+        fBuffer_cluster_data_matchedTrackDeltaPhi->insert(fBuffer_cluster_data_matchedTrackDeltaPhi->end(), cl.matchedTrackDeltaPhi.begin(), cl.matchedTrackDeltaPhi.end());
+        fBuffer_cluster_data_matchedTrackP->insert(fBuffer_cluster_data_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
+        fBuffer_cluster_data_matchedTrackSel->insert(fBuffer_cluster_data_matchedTrackSel->end(), cl.matchedTrackSel.begin(), cl.matchedTrackSel.end());
+      }
     }
 
     // fill tree
@@ -228,21 +234,21 @@ void Converter::processFile(TFile *file) {
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
     TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
-    if (O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
+    if (_saveClusters && O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
     TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
-    if (O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
+    if (_saveClusters && O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     if (!O2jcollision) throw std::runtime_error("TTree O2jcollision could not be found in file.");
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
     if (!O2jtrack) throw std::runtime_error("TTree O2jtrack could not be found in file.");
     TTree *O2jcluster = (TTree *)dir->Get("O2jcluster");
-    if (!O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
+    if (_saveClusters && !O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
     TTree *O2jbc = (TTree *)dir->Get("O2jbc");
     if (!O2jbc) throw std::runtime_error("TTree O2jbc could not be found in file.");
 
     // build event
     events =
-        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack);
+        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack, _saveClusters);
 
     DEBUG("Event size: " << events.size())
     totalNumberOfEvents += events.size();

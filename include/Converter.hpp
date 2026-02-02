@@ -71,17 +71,17 @@ class Converter {
 
   void clearBuffers();
 
-  bool _createHistograms;
-
   // define global switches
-  bool fIsPbPb = false;
-  bool fIsMC = false;
+  bool _createHistograms;
+  bool _isPbPb;
+  bool _isMC;
+  bool _saveClusters;
 
 public:
   void processFile(TFile *file);
 
-  Converter(TString outputFileName, TString configFile, bool createHistograms)
-      : _createHistograms(createHistograms) {
+  Converter(TString outputFileName, TString configFile, bool createHistograms, bool isPbPb, bool isMC, bool saveClusters)
+      : _createHistograms(createHistograms), _isPbPb(isPbPb), _isMC(isMC), _saveClusters(saveClusters) {
     outFile = new TFile(outputFileName.Data(), "RECREATE");
 
     treecuts = YAML::LoadFile(configFile.Data());

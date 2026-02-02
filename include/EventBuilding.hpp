@@ -172,7 +172,7 @@ public:
 
 std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                                TTree *clusters, TTreeReader *clustertracks,
-                               TTreeReader *emctracks) {
+                               TTreeReader *emctracks, bool saveClusters) {
 
   std::vector<Event> events;
   // print all branches and type in the trees
@@ -189,7 +189,6 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   std::unordered_map<int, std::vector<int>> clusterMap;
   // map of track index of matched tracks -> track's etaEMCAL, phiEMCAL, momentum
   std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t, uint8_t>> matchedTrackMap;
-
   TTreeReaderArray<Int_t> matchedTrackIdxs(*clustertracks, "fIndexArrayJTracks");
 
   // loop over all tracks and fill map
@@ -200,30 +199,34 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
     trackMap[collisionID].push_back(j);
   }
 
-  // loop over all clusters and fill map
-  for (int j = 0; j < clusters->GetEntries(); j++) {
-    clusters->GetEntry(j);
-    int collisionID;
-    GetLeafValue(clusters, "fIndexJCollisions", collisionID);
-    clusterMap[collisionID].push_back(j);
-  }
-  // check that we have exactly one clustertrack entry for each cluster
-  if (clusters->GetEntries() != clustertracks->GetEntries())
-    throw std::runtime_error("Unequal number of clusters and clustertracks!");
+  if (saveClusters) {
+    // check that we have exactly one clustertrack entry for each cluster
+    if (clusters->GetEntries() != clustertracks->GetEntries())
+      throw std::runtime_error("Unequal number of clusters and clustertracks!");
 
-  TTreeReaderValue<Int_t> matchedTrackIdx(*emctracks, "fIndexJTracks");
-  TTreeReaderValue<Float_t> phi(*emctracks, "fPhiEMCAL");
-  TTreeReaderValue<Float_t> eta(*emctracks, "fEtaEMCAL");
-  while (emctracks->Next()) {
-    tracks->GetEntry(*matchedTrackIdx);
-    Float_t matchedTrackPt, matchedTrackEta, matchedTrackP;
-    uint8_t matchedTrackSel;
-    GetLeafValue(tracks, "fPt", matchedTrackPt);
-    GetLeafValue(tracks, "fEta", matchedTrackEta);
-    GetLeafValue(tracks, "fTrackSel", matchedTrackSel);
-    matchedTrackP = matchedTrackPt * cosh(matchedTrackEta);
-    // map each track index to its etaEMCAL, phiEMCAL, and momentum
-    matchedTrackMap.try_emplace(*matchedTrackIdx, *eta, *phi, matchedTrackP, matchedTrackSel);
+    // loop over all clusters and fill map
+    for (int j = 0; j < clusters->GetEntries(); j++) {
+      clusters->GetEntry(j);
+      int collisionID;
+      GetLeafValue(clusters, "fIndexJCollisions", collisionID);
+      clusterMap[collisionID].push_back(j);
+    }
+
+    // loop over matched tracks and build matched track map
+    TTreeReaderValue<Int_t> matchedTrackIdx(*emctracks, "fIndexJTracks");
+    TTreeReaderValue<Float_t> phi(*emctracks, "fPhiEMCAL");
+    TTreeReaderValue<Float_t> eta(*emctracks, "fEtaEMCAL");
+    while (emctracks->Next()) {
+      tracks->GetEntry(*matchedTrackIdx);
+      Float_t matchedTrackPt, matchedTrackEta, matchedTrackP;
+      uint8_t matchedTrackSel;
+      GetLeafValue(tracks, "fPt", matchedTrackPt);
+      GetLeafValue(tracks, "fEta", matchedTrackEta);
+      GetLeafValue(tracks, "fTrackSel", matchedTrackSel);
+      matchedTrackP = matchedTrackPt * cosh(matchedTrackEta);
+      // map each track index to its etaEMCAL, phiEMCAL, and momentum
+      matchedTrackMap.try_emplace(*matchedTrackIdx, *eta, *phi, matchedTrackP, matchedTrackSel);
+    }
   }
 
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
@@ -248,20 +251,22 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
       ev.tracks.push_back(tr);
     }
 
-    // DEBUG("Number of clusters: " << clusterMap[idxCol].size())
-    // loop through global indices of clusters (idxCluster) for this collision
-    for(const int& idxCluster : clusterMap[idxCol]) {
-      clusters->GetEntry(idxCluster);
-      int collisionID;
-      GetLeafValue(clusters, "fIndexJCollisions", collisionID);
-      // check collision IDs match, mismatch should be impossible
-      if (collisionID != idxCol)
-        throw std::runtime_error("Collision IDs don't match in cluster map!");
-      Cluster cl;
-      cl.build(clusters);
-      clustertracks->SetEntry(idxCluster);
-      cl.getMatchedTracks(matchedTrackIdxs, matchedTrackMap);
-      ev.clusters.push_back(cl);
+    if (saveClusters) {
+      // DEBUG("Number of clusters: " << clusterMap[idxCol].size())
+      // loop through global indices of clusters (idxCluster) for this collision
+      for(const int& idxCluster : clusterMap[idxCol]) {
+        clusters->GetEntry(idxCluster);
+        int collisionID;
+        GetLeafValue(clusters, "fIndexJCollisions", collisionID);
+        // check collision IDs match, mismatch should be impossible
+        if (collisionID != idxCol)
+          throw std::runtime_error("Collision IDs don't match in cluster map!");
+        Cluster cl;
+        cl.build(clusters);
+        clustertracks->SetEntry(idxCluster);
+        cl.getMatchedTracks(matchedTrackIdxs, matchedTrackMap);
+        ev.clusters.push_back(cl);
+      }
     }
 
     events.push_back(ev);

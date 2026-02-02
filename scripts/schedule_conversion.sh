@@ -10,6 +10,7 @@ Options:
   -o, --output OUTPUT   Set output tree directory (required)
   --aod-name FILENAME   Set filename for AO2Ds (default: AO2D.root)
   --tree-name FILENAME  Set filename for trees (default: BerkeleyTree.root)
+  --save-clusters       Save cluster information (default: false)
   -n, --nfiles NFILES   Set number of AO2Ds per converted tree (default: 10)
   -c, --config CONFIG   Set tree configuration YAML file (default: tree-cuts.yaml in project root)
   -e, --email EMAIL     Request slurm to send email notifications to EMAIL at start and end (default: false)
@@ -25,7 +26,7 @@ cd "$project_root/scripts"
 
 # using GNU getopt in place of Python argparse
 PARSEDARGS=$(getopt -o p:i:o:n:c:r:e:th \
-                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,root-pack:,email:,test,help \
+                    --long path:,input:,output:,aod-name:,tree-name:,nfiles:,config:,root-pack:,email:,save-clusters,test,help \
                     -n 'conversion-scheduler' -- "$@")
 PARSE_EXIT=$?
 if [ $PARSE_EXIT -ne 0 ] ; then exit $PARSE_EXIT ; fi
@@ -38,6 +39,7 @@ input=
 output=
 aod_name=
 tree_name=
+cluster_opt=
 nfiles_per_tree=
 config=
 root_pack=
@@ -50,6 +52,7 @@ while true; do
         -o | --output )    output="$2"; shift 2 ;;
         --aod-name )       aod_name="$2"; shift 2 ;;
         --tree-name )      tree_name="$2"; shift 2 ;;
+        --save-clusters )  cluster_opt="--saveClusters"; shift ;;
         -n | --nfiles )    nfiles_per_tree="$2"; shift 2 ;;
         -c | --config )    config="$2"; shift 2 ;;
         -r | --root-pack ) root_pack="$2"; shift 2 ;;
@@ -84,6 +87,7 @@ Beginning conversion. Your conversion settings:
     Output tree directory: $output
     AOD name: $aod_name
     Tree name: $tree_name
+    Save clusters: $( [ -n "$cluster_opt" ] && echo "true" || echo "false" )
     Number of files per tree: $nfiles_per_tree
     Config file: $config
     ROOT package: $root_pack
@@ -136,6 +140,7 @@ sed -e "s|{{NJOBS}}|$njobs|g" \
     -e "s|{{INPUT_FILELIST}}|$aod_list|g" \
     -e "s|{{NFILES_PER_TREE}}|$nfiles_per_tree|g" \
     -e "s|{{TREE_NAME}}|$tree_name|g" \
+    -e "s|{{CLUSTER_OPT}}|$cluster_opt|g" \
     -e "s|{{CONVERTER_PATH}}|$converter_path|g" \
     -e "s|{{ROOT_PACK}}|$root_pack|g" \
     "$project_root/templates/convert_nersc.tmpl" > "$output/convert.sh"

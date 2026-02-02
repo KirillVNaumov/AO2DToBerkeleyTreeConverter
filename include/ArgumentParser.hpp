@@ -16,6 +16,7 @@ public:
   bool createHistograms = false;
   bool isPbPb = false;
   bool isMC = false;
+  bool saveClusters = false;
 
   void displayHelp() {
     std::cout << "./converter [args]" << std::endl;
@@ -23,6 +24,7 @@ public:
     std::cout << "\t--outputFileName=<file>, -o <file> : output ROOT file in the BerkeleyTree format (default: \"AOD.root\")" << std::endl;
     std::cout << "\t--configFile=<file>, -c <file>     : YAML files with cuts to be done to the converted data (default: \"treeCuts.yaml\")" << std::endl;
     std::cout << "\t--createHistograms                 : Create histograms from the converted data" << std::endl;
+    std::cout << "\t--saveClusters                     : Save clusters" << std::endl;
     std::cout << "\t--isPbPb                           : The data is from PbPb runs" << std::endl;
     std::cout << "\t--isMC                             : The data is produced from Monte Carlo Simulation" << std::endl;
   }
@@ -71,6 +73,8 @@ public:
         configFile = *iter;
       } else if (!arg.compare("--createHistograms")) {
         createHistograms = true;
+      } else if (!arg.compare("--saveClusters")) {
+        saveClusters = true;
       } else if (!arg.compare("-PbPb")) {
         isPbPb = true;
       } else if (!arg.compare("-MC")) {

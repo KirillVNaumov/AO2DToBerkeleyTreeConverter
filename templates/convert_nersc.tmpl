@@ -56,7 +56,7 @@ done
 cmd="$shifter_cmd --module=cvmfs \
     /cvmfs/alice.cern.ch/bin/alienv setenv {{ROOT_PACK}} -c \
     {{CONVERTER_PATH}} \
-      -i $input_txt -o $output_file -c $config_file"
+      -i $input_txt -o $output_file -c $config_file {{CLUSTER_OPT}}"
 echo "Conversion command: $cmd"
 $cmd
 ecode=$?
