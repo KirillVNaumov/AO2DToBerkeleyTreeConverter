@@ -37,65 +37,66 @@ void Converter::createTree() {
   outputTree = new TTree("eventTree", "eventTree");
 
   outputTree->Branch("run_number", &fBuffer_runNumber);
+  outputTree->Branch("multiplicity", &fBuffer_multiplicity);
+  outputTree->Branch("centrality", &fBuffer_centrality);
+  outputTree->Branch("occupancy", &fBuffer_trackOccupancyInTimeRange);
   outputTree->Branch("event_sel", &fBuffer_eventSel);
   outputTree->Branch("trig_sel", &fBuffer_triggerSel);
-  outputTree->Branch("occupancy", &fBuffer_trackOccupancyInTimeRange);
-  outputTree->Branch("centrality", &fBuffer_centrality);
-  outputTree->Branch("multiplicity", &fBuffer_multiplicity);
+  outputTree->Branch("rct", &fBuffer_rct);
 
   // track
-  outputTree->Branch("track_data_eta", &fBuffer_track_data_eta);
-  outputTree->Branch("track_data_phi", &fBuffer_track_data_phi);
-  outputTree->Branch("track_data_pt", &fBuffer_track_data_pt);
-  outputTree->Branch("track_data_label", &fBuffer_track_data_label);
-  outputTree->Branch("track_data_sel", &fBuffer_track_data_sel);
+  outputTree->Branch("track_eta", &fBuffer_track_eta);
+  outputTree->Branch("track_phi", &fBuffer_track_phi);
+  outputTree->Branch("track_pt", &fBuffer_track_pt);
+  outputTree->Branch("track_sel", &fBuffer_track_sel);
 
   // cluster
   if (saveClusters) {
-    outputTree->Branch("cluster_data_energy", &fBuffer_cluster_data_energy);
-    outputTree->Branch("cluster_data_eta", &fBuffer_cluster_data_eta);
-    outputTree->Branch("cluster_data_phi", &fBuffer_cluster_data_phi);
-    outputTree->Branch("cluster_data_m02", &fBuffer_cluster_data_m02);
-    outputTree->Branch("cluster_data_m20", &fBuffer_cluster_data_m20);
-    outputTree->Branch("cluster_data_ncells", &fBuffer_cluster_data_ncells);
-    outputTree->Branch("cluster_data_time", &fBuffer_cluster_data_time);
-    outputTree->Branch("cluster_data_exoticity", &fBuffer_cluster_data_isExotic);
-    outputTree->Branch("cluster_data_dbc", &fBuffer_cluster_data_distanceToBadChannel);
-    outputTree->Branch("cluster_data_nlm", &fBuffer_cluster_data_nlm);
-    outputTree->Branch("cluster_data_def", &fBuffer_cluster_data_definition);
-    outputTree->Branch("cluster_data_matched_track_n", &fBuffer_cluster_data_matchedTrackN);
-    outputTree->Branch("cluster_data_matched_track_delta_eta", &fBuffer_cluster_data_matchedTrackDeltaEta);
-    outputTree->Branch("cluster_data_matched_track_delta_phi", &fBuffer_cluster_data_matchedTrackDeltaPhi);
-    outputTree->Branch("cluster_data_matched_track_p", &fBuffer_cluster_data_matchedTrackP);
-    outputTree->Branch("cluster_data_matched_track_sel", &fBuffer_cluster_data_matchedTrackSel);
+    outputTree->Branch("cluster_energy", &fBuffer_cluster_energy);
+    outputTree->Branch("cluster_eta", &fBuffer_cluster_eta);
+    outputTree->Branch("cluster_phi", &fBuffer_cluster_phi);
+    outputTree->Branch("cluster_m02", &fBuffer_cluster_m02);
+    outputTree->Branch("cluster_m20", &fBuffer_cluster_m20);
+    outputTree->Branch("cluster_ncells", &fBuffer_cluster_ncells);
+    outputTree->Branch("cluster_time", &fBuffer_cluster_time);
+    outputTree->Branch("cluster_exoticity", &fBuffer_cluster_isExotic);
+    outputTree->Branch("cluster_dbc", &fBuffer_cluster_distanceToBadChannel);
+    outputTree->Branch("cluster_nlm", &fBuffer_cluster_nlm);
+    outputTree->Branch("cluster_defn", &fBuffer_cluster_definition);
+    outputTree->Branch("cluster_matched_track_n", &fBuffer_cluster_matchedTrackN);
+    outputTree->Branch("cluster_matched_track_delta_eta", &fBuffer_cluster_matchedTrackDeltaEta);
+    outputTree->Branch("cluster_matched_track_delta_phi", &fBuffer_cluster_matchedTrackDeltaPhi);
+    outputTree->Branch("cluster_matched_track_p", &fBuffer_cluster_matchedTrackP);
+    outputTree->Branch("cluster_matched_track_pt", &fBuffer_cluster_matchedTrackPt);
+    outputTree->Branch("cluster_matched_track_sel", &fBuffer_cluster_matchedTrackSel);
   }
   // outputTree->SetDirectory(0);
 }
 
 void Converter::clearBuffers() {
-  fBuffer_track_data_eta->clear();
-  fBuffer_track_data_phi->clear();
-  fBuffer_track_data_pt->clear();
-  fBuffer_track_data_label->clear();
-  fBuffer_track_data_sel->clear();
+  fBuffer_track_eta->clear();
+  fBuffer_track_phi->clear();
+  fBuffer_track_pt->clear();
+  fBuffer_track_sel->clear();
 
   if (saveClusters) {
-    fBuffer_cluster_data_energy->clear();
-    fBuffer_cluster_data_eta->clear();
-    fBuffer_cluster_data_phi->clear();
-    fBuffer_cluster_data_m02->clear();
-    fBuffer_cluster_data_m20->clear();
-    fBuffer_cluster_data_ncells->clear();
-    fBuffer_cluster_data_time->clear();
-    fBuffer_cluster_data_isExotic->clear();
-    fBuffer_cluster_data_distanceToBadChannel->clear();
-    fBuffer_cluster_data_nlm->clear();
-    fBuffer_cluster_data_definition->clear();
-    fBuffer_cluster_data_matchedTrackN->clear();
-    fBuffer_cluster_data_matchedTrackDeltaEta->clear();
-    fBuffer_cluster_data_matchedTrackDeltaPhi->clear();
-    fBuffer_cluster_data_matchedTrackP->clear();
-    fBuffer_cluster_data_matchedTrackSel->clear();
+    fBuffer_cluster_energy->clear();
+    fBuffer_cluster_eta->clear();
+    fBuffer_cluster_phi->clear();
+    fBuffer_cluster_m02->clear();
+    fBuffer_cluster_m20->clear();
+    fBuffer_cluster_ncells->clear();
+    fBuffer_cluster_time->clear();
+    fBuffer_cluster_isExotic->clear();
+    fBuffer_cluster_distanceToBadChannel->clear();
+    fBuffer_cluster_nlm->clear();
+    fBuffer_cluster_definition->clear();
+    fBuffer_cluster_matchedTrackN->clear();
+    fBuffer_cluster_matchedTrackDeltaEta->clear();
+    fBuffer_cluster_matchedTrackDeltaPhi->clear();
+    fBuffer_cluster_matchedTrackP->clear();
+    fBuffer_cluster_matchedTrackPt->clear();
+    fBuffer_cluster_matchedTrackSel->clear();
   }
 }
 
@@ -105,8 +106,6 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     // clear all buffers
     clearBuffers();
 
-    // CHECK: does this actually do anything? if so, have to be careful of
-    // what happens to matched tracks
     if (saveClusters && treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
@@ -120,10 +119,10 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     }
 
     // fill event level properties
-    // TODO: check types, maybe some way to do this dynamically?
     fBuffer_runNumber = (Int_t)ev.col.runNumber;
-    fBuffer_eventSel = (uint16_t)ev.col.eventSel;
-    fBuffer_triggerSel = (uint64_t)ev.col.triggerSel;
+    fBuffer_eventSel = (UShort_t)ev.col.eventSel;
+    fBuffer_triggerSel = (ULong64_t)ev.col.triggerSel;
+    fBuffer_rct = (UInt_t)ev.col.rct;
     fBuffer_trackOccupancyInTimeRange = (Int_t)ev.col.trackOccupancyInTimeRange;
     fBuffer_centrality = (Float_t)ev.col.centrality;
     fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
@@ -138,34 +137,33 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
       if (tr.eta > trackCuts["max_eta"].as<float>())
         continue;
 
-      fBuffer_track_data_eta->push_back((Float_t)tr.eta);
-      fBuffer_track_data_phi->push_back((Float_t)tr.phi);
-      fBuffer_track_data_pt->push_back((Float_t)tr.pt);
-      fBuffer_track_data_label->push_back(0.); // TODO placeholder
-      fBuffer_track_data_sel->push_back((uint8_t)tr.trackSel);
+      fBuffer_track_eta->push_back((Float_t)tr.eta);
+      fBuffer_track_phi->push_back((Float_t)tr.phi);
+      fBuffer_track_pt->push_back((Float_t)tr.pt);
+      fBuffer_track_sel->push_back((UChar_t)tr.trackSel);
     }
 
     // fill cluster properties
     if (saveClusters) {
       for (auto &cl : ev.clusters) {
-        fBuffer_cluster_data_energy->push_back((Float_t)cl.energy);
-        fBuffer_cluster_data_eta->push_back((Float_t)cl.eta);
-        fBuffer_cluster_data_phi->push_back((Float_t)cl.phi);
-        fBuffer_cluster_data_m02->push_back((Float_t)cl.m02);
-        fBuffer_cluster_data_m20->push_back((Float_t)cl.m20);
-        fBuffer_cluster_data_ncells->push_back((UShort_t)cl.ncells);
-        fBuffer_cluster_data_time->push_back((Float_t)cl.time);
-        fBuffer_cluster_data_isExotic->push_back((Bool_t)cl.isExotic);
-        fBuffer_cluster_data_distanceToBadChannel->push_back(
-            (UShort_t)cl.distanceToBadChannel);
-        fBuffer_cluster_data_nlm->push_back((UShort_t)cl.nlm);
-        fBuffer_cluster_data_definition->push_back((UShort_t)cl.definition);
-        fBuffer_cluster_data_matchedTrackN->push_back(
-            (UShort_t)cl.matchedTrackN);
-        fBuffer_cluster_data_matchedTrackDeltaEta->insert(fBuffer_cluster_data_matchedTrackDeltaEta->end(), cl.matchedTrackDeltaEta.begin(), cl.matchedTrackDeltaEta.end());
-        fBuffer_cluster_data_matchedTrackDeltaPhi->insert(fBuffer_cluster_data_matchedTrackDeltaPhi->end(), cl.matchedTrackDeltaPhi.begin(), cl.matchedTrackDeltaPhi.end());
-        fBuffer_cluster_data_matchedTrackP->insert(fBuffer_cluster_data_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
-        fBuffer_cluster_data_matchedTrackSel->insert(fBuffer_cluster_data_matchedTrackSel->end(), cl.matchedTrackSel.begin(), cl.matchedTrackSel.end());
+        fBuffer_cluster_energy->push_back((Float_t)cl.energy);
+        fBuffer_cluster_eta->push_back((Float_t)cl.eta);
+        fBuffer_cluster_phi->push_back((Float_t)cl.phi);
+        fBuffer_cluster_m02->push_back((Float_t)cl.m02);
+        fBuffer_cluster_m20->push_back((Float_t)cl.m20);
+        fBuffer_cluster_ncells->push_back((Int_t)cl.ncells);
+        fBuffer_cluster_time->push_back((Float_t)cl.time);
+        fBuffer_cluster_isExotic->push_back((Bool_t)cl.isExotic);
+        fBuffer_cluster_distanceToBadChannel->push_back(
+            (Float_t)cl.distanceToBadChannel);
+        fBuffer_cluster_nlm->push_back((Int_t)cl.nlm);
+        fBuffer_cluster_definition->push_back((Int_t)cl.definition);
+        fBuffer_cluster_matchedTrackN->push_back((Int_t)cl.matchedTrackN);
+        fBuffer_cluster_matchedTrackDeltaEta->insert(fBuffer_cluster_matchedTrackDeltaEta->end(), cl.matchedTrackDeltaEta.begin(), cl.matchedTrackDeltaEta.end());
+        fBuffer_cluster_matchedTrackDeltaPhi->insert(fBuffer_cluster_matchedTrackDeltaPhi->end(), cl.matchedTrackDeltaPhi.begin(), cl.matchedTrackDeltaPhi.end());
+        fBuffer_cluster_matchedTrackP->insert(fBuffer_cluster_matchedTrackP->end(), cl.matchedTrackP.begin(), cl.matchedTrackP.end());
+        fBuffer_cluster_matchedTrackPt->insert(fBuffer_cluster_matchedTrackPt->end(), cl.matchedTrackPt.begin(), cl.matchedTrackPt.end());
+        fBuffer_cluster_matchedTrackSel->insert(fBuffer_cluster_matchedTrackSel->end(), cl.matchedTrackSel.begin(), cl.matchedTrackSel.end());
       }
     }
 
@@ -230,7 +228,7 @@ void Converter::processFile(TFile *file) {
     TClass *cl = gROOT->GetClass(key->GetClassName());
     if (!cl->InheritsFrom("TDirectory"))
       continue;
-    std::cout << "   Converting dataframe: " << key->GetName() << std::endl;
+    logInfo("   Converting dataframe: ", key->GetName());
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
     TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
@@ -267,6 +265,6 @@ void Converter::processFile(TFile *file) {
     count++;
   }
 
-  std::cout << "Total DFs: " << count << std::endl;
-  std::cout << "Total events: " << totalNumberOfEvents << std::endl;
+  logInfo("Total DFs: ", count);
+  logInfo("Total events: ", totalNumberOfEvents);
 }
