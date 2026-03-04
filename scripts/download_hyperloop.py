@@ -117,6 +117,9 @@ def get_o2physics_version(hydirs, output_dir, ntries = 3, json_file = "full_conf
             # Use strip() to remove spurious newline at end of alien_find output
             path = subprocess.run(f'alien_find {hydir}/.. {json_file}', shell = True, encoding = 'utf-8',
                                     stdout = subprocess.PIPE).stdout.strip()
+            if not path:
+                log.error("Train JSON config not found...")
+                return "NOT-FOUND"
             pair = FilePair(f"alien://{path}", f"file:{output_dir}/")
             msg = download_from_alien(pair, ntries)
             log.debug(msg)
