@@ -6,15 +6,15 @@
 #SBATCH --job-name=makelist
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
 #SBATCH --time=00:05:00
-#SBATCH --output={{SLURM_OUT}}/slurm-treelist-%A.out
+#SBATCH --output={{SLURM_OUT}}/slurm-treelist-%A.log
 
 output={{OUTPUT}}
-tree_fname={{TREE_FNAME}}
+tree_name={{TREE_NAME}}
 tree_list={{OUTPUT}}/tree_list.txt
 root_pack={{ROOT_PACK}}
 
 find $output \
-    -type f -name $tree_fname \
+    -type f -name $tree_name \
     > $tree_list
 
 tstruct=$output/tstruct.yaml

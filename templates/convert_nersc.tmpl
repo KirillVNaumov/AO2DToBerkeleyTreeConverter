@@ -5,23 +5,21 @@
 #SBATCH --account=alice
 #SBATCH --job-name=conversion
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=1
-#SBATCH --time=24:00:00
+#SBATCH --time=6:00:00
 #SBATCH --array=1-{{NJOBS}}
 #SBATCH --image=tch285/o2alma:latest
-#SBATCH --output={{SLURM_OUT}}/slurm-%A_%a.out
+#SBATCH --output={{SLURM_OUT}}/slurm-%A_%a.log
 {{NOTIFY_OPTS}}
 
 config_file={{CONFIG}}
 
 if [ -z "$SLURM_SUBMIT_DIR" ]; then
   echo "Running in test mode."
-  shifter_cmd="shifter --image=tch285/o2alma:latest"
-  # SLURM_ARRAY_JOB_ID=test # for testing only
   SLURM_ARRAY_TASK_ID=1 # for testing only
 else
   echo "Running in sbatch mode."
-  shifter_cmd="shifter"
 fi
+shifter_cmd="shifter --image=tch285/o2alma:latest"
 
 FILELIST={{INPUT_FILELIST}}
 NFILES=$(wc -l < $FILELIST)
@@ -45,6 +43,9 @@ echo "Files to be converted:"
 input_txt={{SLURM_OUT}}/input_$SLURM_ARRAY_TASK_ID.txt
 mkdir -p "{{OUTPUT}}/$SLURM_ARRAY_TASK_ID/"
 output_file={{OUTPUT}}/$SLURM_ARRAY_TASK_ID/{{TREE_NAME}}
+
+# remove input txt if it exists
+rm -f $input_txt
 
 for (( file_idx = start; file_idx <= stop; file_idx++ )); do
   input_file=$(sed -n "${file_idx}p" $FILELIST)
