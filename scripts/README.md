@@ -5,92 +5,116 @@ This section describes the general usage of the downloader (`download_hyperloop.
 ## Table of contents
 
 - [Table of contents](#table-of-contents)
-- [The launcher](#the-launcher)
-- [The HyperDownloader](#the-hyperdownloader)
-  - [Downloader dependencies](#downloader-dependencies)
+- [The configuration file](#the-configuration-file)
+- [The downloader](#the-downloader)
   - [Downloader configuration](#downloader-configuration)
-  - [Obtaining AO2Ds](#obtaining-ao2ds)
+  - [Obtaining the Hyperloop directories](#obtaining-the-hyperloop-directories)
   - [Downloader output](#downloader-output)
-  - [Failed downloads](#failed-downloads)
-- [The conversion scheduler](#the-conversion-scheduler)
-  - [Scheduler dependencies](#scheduler-dependencies)
-  - [Scheduler configuration](#scheduler-configuration)
-  - [Scheduler output](#scheduler-output)
+- [The converter](#the-converter)
+  - [Converter configuration](#converter-configuration)
+  - [Converter cuts](#converter-cuts)
+  - [Converter output](#converter-output)
+- [Perlmutter vs. Hiccup](#perlmutter-vs-hiccup)
 
-## The launcher
+## The configuration file
 
-The launcher (`scripts/launch_pipeline_nersc.sh`) steers the downloader and conversion scheduler. For usage information on the launcher, see the [NERSC-specific instructions](https://github.com/alicernc/info/blob/main/conversion_at_perlmutter.md).  The full pipeline is steerable from the launcher, so refer to that as much as possible.
+The converter is built of two parts: the downloader, which downloads the JE derived dataset from the Grid, and the converter, which converts the downloaded JE derived dataset into the BerkeleyTrees. Both of these are steered by a single YAML configuration file. We recommend storing this in the `config` directory.
 
-> [!CAUTION]
-> The `scripts/launch_pipeline.sh` script is out of date. We are currently keeping it for reference only.
+The config file has three main sections:
 
-## The HyperDownloader
+- `dataset`: This defines the name of the directory in which the downloaded JE derived dataset and converted BerkeleyTrees are stored. This directory will go in `/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data`.
+- `download`: The downloader settings.
+- `convert`: The converter settings.
 
-The downloader validates your AliEn token, identifies all matching files in a given set of Hyperloop directories, and downloads them to a specified location on disk.
+The path to the config file should be passed to the downloader and the converter with `-c <path/to/config>`. If the config file path is absolute, it will look there. If it is relative, then the downloader will first search for it in the `config` directory. If not found there, it will look for it relative to the current directory.
 
-### Downloader dependencies
+## The downloader
 
-The downloader utilizes only the standard library with the exception of the `rich` module. In addition, it must be run *inside* an `alienv` environment, where it has access to the AliEn tools, such as the token tools `alien-token-info` and `alien-token-init` as well as Grid tools like `alien_cp` and `alien_find`.
+The downloader validates your AliEn token, identifies all matching files in a given set of Hyperloop directories, and downloads them locally via `alien_cp`. To run the downloader, simply run
+
+```bash
+scripts/run_download.sh -c <path/to/config>
+```
 
 ### Downloader configuration
 
-The downloader can be configured from the command line with the following options:
+The downloader is configured from the `download` section of the config file. The downloader requires the following information:
 
-- `-i, --input <file>`: Single-line text file containing a comma-delimited list of Hyperloop directories to search. See the [next section](#obtaining-ao2ds) for more information.
-- `-o, --output <dir>`: Directory to save the downloaded files. If the directory already exists, it will be emptied before downloading.
-- `-f, --filename <file>`: The name of the file to search, by default AO2D.root
-- `-n, --nthreads <num>`: The number of threads to use when downloading, by default 10
-- `-t, --ntries <num>`: The number of retries when downloading a file, by default 5
+- `train`: The train number that produced the JE derived dataset. Needed to identify the O2Physics tag it was produced with.
+- `hyperdirs`: A comma-delimited list of Hyperloop directories containing the JE derived data. See the [instructions below](#obtaining-the-hyperloop-directories).
 
-> [!WARNING]
-> Because the output directory is automatically cleared before downloading, it is very easy to accidentally wipe your previously downloaded data, or worse, delete someone else's data! Using some testing/staging area to test downloads, rather than the final directory you want to store your data in, is recommended. There is a dedicated directory for this purpose on NERSC.
+In addition, you can also specify the following information:
 
-### Obtaining AO2Ds
+- `filename`: The filename of the derived data files (AO2D.root by default).
+- `nthreads`: The number of threads to use when downloading from the Grid (40 by default).
+- `ntries`: The number of download attempts per file (5 by default).
+- `timeout`: The maximum time in seconds for each download attempt (150 by default). If you keep getting timeout errors, consider lengthening this time limit.
+
+In some cases, the downloader may not successfully download all the files. To retry the remaining files, simply rerun the downloader with the same command as above. Keep doing this until all files are successfully downloaded, extending the timeout if necessary.
+
+### Obtaining the Hyperloop directories
 
 The conversion operates not on raw AO2Ds but rather on JE derived datasets. These derived datasets are prefixed as "JE_*".
 
-1. You can find a list of all the currently available JE derived datasets by going to the [Hyperloop datasets](https://alimonitor.cern.ch/hyperloop/datasets) on AliMonitor and entering `JE_` in the Name searchbox.
-2. Click on the train link in the "Production Name" column corresponding to the dataset you want to convert, then go to the "Submitted jobs" tab near the top.
+1. There are two ways of obtaining the Hyperloop directories for a given JE derived dataset.
+   - If the dataset is already defined and named as a Hyperloop dataset, you can find a list of all the currently available JE derived datasets by going to the [Hyperloop datasets](https://alimonitor.cern.ch/hyperloop/datasets) page on Hyperloop and entering `JE_` in the Name searchbox.
+   - You can also see the latest productions of JE derived data by train (regardless of whether they have been made into Hyperloop datasets or not) by going to the JE derived data [Hyperloop analysis page](https://alimonitor.cern.ch/hyperloop/view-analysis/50914) and scrolling to the bottom.
+2. If on the dataset page, click on the train link in the "Production Name" column corresponding to the dataset you want to convert, then go to the "Submitted jobs" tab near the top. If on the Hyperloop analysis page, click the train, then go to the "Submitted jobs" tab near the top.
 3. On the far right, above the table, should be a "Copy all output directories" button. Click this and a comma-delimited list of the derived dataset's directories will be put on your clipboard.
-4. Paste this into a text file somewhere on the system, and direct the downloader to this path with the `--input` option. You can see some examples in the `hylists/` directory.
+4. Paste the list into your config file.
 
 ### Downloader output
 
-In addition to the downloaded AO2Ds, the downloader will also save
+The downloader will save, amongst some other unimportant files,
 
-- a log of the download;
-- a filelist of all downloaded AO2Ds with their paths on the local system;
-- and a README, which contains metadata on the download, the converter, and the downloaded Hyperloop directories.
+- A list of the downloaded AO2Ds and their paths on the grid in `aod_paths.txt`;
+- a log of the download in `download.log`;
+  - a log of the latest download retry in `retry.log` and remote paths that were attempted in `retry_paths.txt`;
+- a `filelist.txt` of all downloaded AO2Ds with their paths on the local system (which is then read by the converter);
+- a `download_done` file, marking the download as fully completed;
+- and a `README.md`, which contains metadata on the download, the converter, and the downloaded Hyperloop directories.
 
-### Failed downloads
+## The converter
 
-The downloader is configured to attempt a file download some number of times (specified by `--ntries <num>`) before it fails. After the downloader attempts a download of all files, it will retry downloading the files that failed. If files still fail to be downloaded, the downloader will give up. From experience, downloads are slower and fail more often in the evening (most likely due to higher traffic on the Grid during morning European hours) so starting a download in the morning or early afternoon is recommended.
+The converter converts the downloaded JE derived data files into a BerkeleyTree. To run the converter, simply run
 
-## The conversion scheduler
+```bash
+scripts/run_conversion.sh -c <path/to/config>
+```
 
-Once the dataset has been downloaded from the Grid, you can now convert the dataset. We highly recommend using a batch job to do this. The batch job can be scheduled via the conversion scheduler `scripts/schedule_conversion_nersc.sh`. Conversion on the NERSC systems is highly recommended, since all of the dependencies are immediately available to users.
+### Converter configuration
 
-### Scheduler dependencies
+The converter is configured from the `convert` section of the config file. The converter can be configured with:
 
-The scheduler relies only on Bash and a Slurm configuration accessible via `sbatch`, which it will check for when it is run.
+- `test`: Specifies whether the conversion should be run as a test (`True` by default). If `True`, then the converter will attempt one conversion locally. If `False`, it will submit a Slurm job via `sbatch` to convert the whole dataset.
+- `tree_name`: Filename of the BerkeleyTrees (BerkeleyTree.root by default).
+- `save_clusters`: Specifies whether to save cluster information (False by default).
+- `naod`: The number of AO2D files per BerkeleyTree (10 by default).
+- `root_spec`: Grid package specification that provides the installation of ROOT (`ROOT/v6-36-04-alice2-2` by default).
+- `email`: Email to be notified when the conversion is finished (None by default). If None or an empty string, no notification will be sent.
+- `recompile`: Specifies whether to recompile the converter beforehand (False by default)
+- `verbosity`: Verbosity level during conversion. 0 is WARNING, 1 is INFO, and 2 or higher is DEBUG (1 by default)
 
-### Scheduler configuration
+### Converter cuts
 
-The downloader can be configured from the command line with the following options:
+Certain cuts on event, track, and cluster properties can also be applied during the conversion. In general, these cuts should be as loose as possible, to allow as many analyses. Remember that any selection that can be done via the converter can also be done on the analysis level, so only apply cuts if they are strictly necessary (or you think there won't be any reason to not need them). The cuts are defined in the `event_cuts`, `track_cuts`, and `cluster_cuts` subsections in the `convert` section of the config file.
 
-- `-p, --path`: Path to the `converter` binary, typically located in `bin/`.
-- `-i, --input`: Path to the directory containing the AO2Ds to be converted.
-- `-o, --output`: Path to the output directory where converted trees will be placed. If the directory does not exist, it will be made automatically. If the directory already exists, it will be cleared before conversion.
-- `--aod-name`: Name of the AO2D files, by default `AO2D.root`.
-- `--tree-name`: Name of the converted trees, by default `BerkeleyTrees.root`.
-- `-n, --nfiles`: Number of AO2D files to convert into one tree, by default 10.
-- `-c, --config`: Configuration YAML file specifying the cuts on various properties when converting, by default the `tree-cuts.yaml` file found in the repository root directory.
-- `-e, --email`: Email to be notified at when the conversion job starts and completes. Leave without argument or absent to disable email notification.
-- `-t, --test`: Start a test run. One set of files will be converted locally.
+In general, if the cut is not specified (i.e. the key is not present in the config file), it is set to a negative value, or it is set to a YAML null value (i.e. `zvtx_cut:` or `zvtx_cut: None` or `zvtx_cut: null`), the corresponding cut is ignored. The only exceptions are the track transverse momentum minimum and the track eta range, which are set to dummy values which should effectively do nothing.
 
-> [!WARNING]
-> Because the output directory is automatically cleared before converting, it is very easy to accidentally wipe your previous work, or worse, delete someone else's data! Using some testing/staging area to test conversions, rather than the final directory you want to store your data in, is recommended.  There is a dedicated directory for this purpose on NERSC.
+- Event cuts:
+  - `zvtx_cut`: events must have a reconstructed vertex z position within +- of the given value.
+  - `clus_E_min`: the event must contain at least one cluster with at least this energy. Note that this means that the event must also have one cluster; events with no clusters will fail this cut and be removed. **Be careful setting this to zero**: only negative values are null values! Setting this cut to zero will enforce that the event must have a cluster in it, which may not be what you want. If you want to ignore this cut, set it to a negative value, rather than zero. This cut is also ignored if `save_clusters` is set to `False`.
+- Track cuts:
+  - `pt_min`: The track must have transverse momentum greater than this value. If unspecified or set to a YAML null value, it is set to -1.
+  - `eta_min`, `eta_max`: The track must have pseudorapidity in the specified range. If unspecified or set to a YAML null value, the minimum and maximum are set to -5 and 5.
+- Cluster cuts:
+  - `definition`: The cluster must have this definition to be saved. The definition ID for different kinds of clusterizers can be found in [EMCALClusters.h](https://github.com/AliceO2Group/O2Physics/blob/master/PWGJE/DataModel/EMCALClusters.h#L35). V1 clusters are definition 0, and the default V3 clusters are definition 10.
+  - `E_min`: The cluster must have this minimum energy.
 
-### Scheduler output
+### Converter output
 
-The scheduler will first save a list of AO2Ds found in the input directory. It will then construct a conversion batch script to convert these AO2Ds into BerkeleyTrees. If run in test mode, the scheduler will run this script directly to convert a set of AO2Ds into a single BerkeleyTree, as well as show the standard output to the console. If run in production mode, the scheduler will submit this batch script via `sbatch`. It will also submit a dependency job to save a filelist of the produced trees once they are all converted.
+The converter will compile (if necessary) the converter, then construct a conversion batch script to convert these AO2Ds into BerkeleyTrees. If run in test mode, the converter will run this script directly to convert a set of AO2Ds into a single BerkeleyTree, as well as show the standard output to the console. If run in production mode, the converter will submit this batch script via `sbatch`. It will also submit a dependency job to save a filelist of the produced trees once they are all converted. **It is highly recommend testing with `test: True` first before scheduling the full conversion, to make sure all cuts are applied properly and everything looks normal.**
+
+## Perlmutter vs. Hiccup
+
+The downloader and converter is written for running on Perlmutter, and it is highly recommended to **not** try to do this on Hiccup - you will not have the right dependencies. If you need a dataset on hiccup, convert it first on Perlmutter, then ask Tucker for it to be moved to Hiccup. The datasets on Hiccup can be found at `/rstorage/alice/run3/data`.

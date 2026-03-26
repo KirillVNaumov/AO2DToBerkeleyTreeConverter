@@ -21,30 +21,17 @@ Contact: Tucker via Slack or [tucker_hwang@berkeley.edu](mailto:tucker_hwang@ber
 
 ## Dependencies
 
-This package comes in three components: a downloader, a converter, and a scheduler tool.
+This package comes in three components: a downloader and a conversion scheduler.
 
-- The downloader requires a valid Python 3 installation with the `rich` module installed, and the AliEn tools, in particular `alien_find`, `alien_cp`, and `alien_ls`.
+- The downloader requires a valid Python 3 installation with the `rich` module installed, and the AliEn tools, in particular `alien_find` and `alien_cp`.
 - The converter depends only on `ROOT` and the `yaml-cpp` development package and is compiled with `make`. The name of the development package varies from system to system, but is typically called `yaml-cpp-dev` or `yaml-cpp-devel`.
 - The scheduler, written in Bash, requires an accessible Slurm configuration. The jobs are scheduled via `sbatch`.
 
-## Installation
-
-To build the converter binary, you can simply run `make` in the root of the repository or run `make -C <path/to/root>`. To compile in debug mode, run with `make BUILD=debug`. The binary is built into an executable called `converter` in the `bin` directory. To run the converter standalone:
-
-```bash
-./bin/converter [args]
-  --input-filelist=<file>, -i <file>  : Text file list of input AO2D files to be converted
-  --output-filename=<file>, -o <file> : Path to the output BerkeleyTree ROOT file (default: BerkeleyTree.root)
-  --config-file=<file>, -c <file>     : YAML file containing cuts to be implemented on the converted data (default: tree-cuts.yaml)
-  --create-histograms                 : Build QA histograms from the converted data
-  --save-clusters                     : Save cluster information
-  --is-mc                             : The data is produced from Monte Carlo Simulation (currently just a placeholder)
-  -v, -vv                             : Increase verbosity; -v is INFO, and -vv or higher is DEBUG
-```
-
 ## Usage
 
-For general usage and documentation, please refer to the [README](scripts/README.md) in the `scripts` directory. For specifics on how to use the converter on the NERSC system, please see the [NERSC-specific instructions](https://github.com/alicernc/info/blob/main/conversion_at_perlmutter.md).
+Clone the repository with `git clone git@github.com:KirillVNaumov/AO2DToBerkeleyTreeConverter.git`.
+
+For general usage and documentation, please refer to the [README](scripts/README.md) in the `scripts` directory.
 
 ## Future improvements
 
