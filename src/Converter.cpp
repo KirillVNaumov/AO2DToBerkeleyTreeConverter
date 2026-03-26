@@ -45,9 +45,9 @@ void Converter::createTree() {
   outputTree->Branch("rct", &fBuffer_rct);
 
   // track
+  outputTree->Branch("track_pt", &fBuffer_track_pt);
   outputTree->Branch("track_eta", &fBuffer_track_eta);
   outputTree->Branch("track_phi", &fBuffer_track_phi);
-  outputTree->Branch("track_pt", &fBuffer_track_pt);
   outputTree->Branch("track_sel", &fBuffer_track_sel);
 
   // cluster
@@ -106,10 +106,13 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     // clear all buffers
     clearBuffers();
 
-    if (saveClusters && treecuts["event_cuts"]["min_clus_E"].as<float>() > 0.) {
+    if (event_zvtx_cut >= 0 && TMath::Abs(ev.col.posZ) > event_zvtx_cut)
+      continue;
+
+    if (saveClusters && event_clus_E_min >= 0) {
       bool acc = false;
       for (auto &cl : ev.clusters) {
-        if (cl.energy > treecuts["event_cuts"]["min_clus_E"].as<float>()) {
+        if (cl.energy > event_clus_E_min) {
           acc = true;
           break;
         }
@@ -127,14 +130,13 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     fBuffer_centrality = (Float_t)ev.col.centrality;
     fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
 
-    trackCuts = treecuts["track_cuts"];
     // fill track properties
     for (auto &tr : ev.tracks) {
-      if (tr.pt < trackCuts["min_pt"].as<float>())
+      if (tr.pt < track_pt_min)
         continue;
-      if (tr.eta < trackCuts["min_eta"].as<float>())
+      if (tr.eta < track_eta_min)
         continue;
-      if (tr.eta > trackCuts["max_eta"].as<float>())
+      if (tr.eta > track_eta_max)
         continue;
 
       fBuffer_track_eta->push_back((Float_t)tr.eta);
@@ -146,6 +148,10 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     // fill cluster properties
     if (saveClusters) {
       for (auto &cl : ev.clusters) {
+        if (cluster_E_min >= 0 && cl.energy < cluster_E_min)
+          continue;
+        if (cluster_definition >= 0 && cl.definition != cluster_definition)
+          continue;
         fBuffer_cluster_energy->push_back((Float_t)cl.energy);
         fBuffer_cluster_eta->push_back((Float_t)cl.eta);
         fBuffer_cluster_phi->push_back((Float_t)cl.phi);
@@ -172,27 +178,6 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
   }
 }
 
-void Converter::doEventSelection(std::vector<Event> &events) {
-  // loop over events and remove them from vector if they don't fulfull a
-  // certain cut possibility to do event selection if wanted
-  eventCuts = treecuts["event_cuts"];
-
-  // loop over event vector and erase if not fulfilling cuts
-  std::vector<Event>::iterator it = events.begin();
-  while (it != events.end()) {
-    if (TMath::Abs(it->col.posZ) > eventCuts["z_vtx_cut"].as<float>()) {
-      it = events.erase(it);
-    } else if ((it->col.multiplicity < eventCuts["mult_min"].as<float>()) ||
-               (it->col.multiplicity > eventCuts["mult_max"].as<float>())) {
-      it = events.erase(it);
-
-    } else {
-      ++it;
-    }
-  }
-  return;
-}
-
 // can be used to do analysis (if needed)
 void Converter::doAnalysis(std::vector<Event> &events) {
   for (auto &ev : events) {
@@ -217,6 +202,56 @@ void Converter::doAnalysis(std::vector<Event> &events) {
   }
 }
 
+void Converter::readConfig() {
+  logInfo("Cut config:");
+  eventCuts = treecuts["convert"]["event_cuts"];
+
+  if (! eventCuts["zvtx_cut"] || eventCuts["zvtx_cut"].IsNull())
+    event_zvtx_cut = -1.0;
+  else
+    event_zvtx_cut = eventCuts["zvtx_cut"].as<float>();
+  logInfo("Z-vtx cut: ", event_zvtx_cut);
+
+  if (! eventCuts["clus_E_min"] || eventCuts["clus_E_min"].IsNull())
+    event_clus_E_min = -1.0;
+  else
+    event_clus_E_min = eventCuts["clus_E_min"].as<float>();
+  logInfo("Event cluster energy minimum: ", event_clus_E_min);
+
+  trackCuts = treecuts["convert"]["track_cuts"];
+
+  if (! trackCuts["pt_min"] || trackCuts["pt_min"].IsNull())
+    track_pt_min = -1.0;
+  else
+    track_pt_min = trackCuts["pt_min"].as<float>();
+  logInfo("Track pT minimum: ", track_pt_min);
+
+  if (! trackCuts["eta_min"] || trackCuts["eta_min"].IsNull())
+    track_eta_min = -5.0;
+  else
+    track_eta_min = trackCuts["eta_min"].as<float>();
+  logInfo("Track eta minimum: ", track_eta_min);
+
+  if (! trackCuts["eta_max"] || trackCuts["eta_max"].IsNull())
+    track_eta_max = 5.0;
+  else
+    track_eta_max = trackCuts["eta_max"].as<float>();
+  logInfo("Track eta maximum: ", track_eta_max);
+
+  clusterCuts = treecuts["convert"]["cluster_cuts"];
+
+  if (! clusterCuts["definition"] || clusterCuts["definition"].IsNull())
+    cluster_definition = -1;
+  else
+    cluster_definition = clusterCuts["definition"].as<int>();
+  logInfo("Cluster definition: ", cluster_definition);
+
+  if (! clusterCuts["E_min"] || clusterCuts["E_min"].IsNull())
+    cluster_E_min = -1.0;
+  else
+    cluster_E_min = clusterCuts["E_min"].as<float>();
+  logInfo("Cluster energy minimum: ", cluster_E_min);
+}
 void Converter::processFile(TFile *file) {
   std::vector<Event> events;
   int totalNumberOfEvents = 0;
@@ -231,10 +266,19 @@ void Converter::processFile(TFile *file) {
     logInfo("   Converting dataframe: ", key->GetName());
     TDirectory *dir = (TDirectory *)key->ReadObj();
 
-    TTreeReader *O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
-    if (saveClusters && O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
-    TTreeReader *O2jemctrack = new TTreeReader("O2jemctrack", dir);
-    if (saveClusters && O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
+    TTreeReader *O2jclustertrack, *O2jemctrack;
+
+    if (saveClusters) {
+      O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
+      if (saveClusters && O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
+      O2jemctrack = new TTreeReader("O2jemctrack", dir);
+      if (saveClusters && O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
+    }
+    else {
+      O2jclustertrack = nullptr;
+      O2jemctrack = nullptr;
+    }
+
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     if (!O2jcollision) throw std::runtime_error("TTree O2jcollision could not be found in file.");
     TTree *O2jtrack = (TTree *)dir->Get("O2jtrack");
@@ -250,9 +294,6 @@ void Converter::processFile(TFile *file) {
 
     logDebug("Event size: ", events.size());
     totalNumberOfEvents += events.size();
-
-    // do event selection
-    doEventSelection(events);
 
     if (createHistograms)
       doAnalysis(events);

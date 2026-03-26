@@ -12,19 +12,17 @@ class ArgumentParser {
 public:
   std::string inputFilelist;
   std::string outputFilename = "BerkeleyTree.root";
-  std::string configFile = "tree-cuts.yaml";
+  std::string configFile;
   bool createHistograms = false;
   bool saveClusters = false;
-  bool isMC = false;
 
   void displayHelp() {
     std::cout << "./converter [args]" << std::endl;
     std::cout << "\t--input-filelist=<file>, -i <file>  : text file with paths to AO2Ds" << std::endl;
     std::cout << "\t--output-filename=<file>, -o <file> : output ROOT file in the BerkeleyTree format (default: \"BerkeleyTree.root\")" << std::endl;
-    std::cout << "\t--config-file=<file>, -c <file>     : YAML files with cuts to be done to the converted data (default: \"tree-cuts.yaml\")" << std::endl;
+    std::cout << "\t--config-file=<file>, -c <file>     : YAML files with cuts to be done to the converted data" << std::endl;
     std::cout << "\t--create-histograms                 : Create histograms from the converted data" << std::endl;
     std::cout << "\t--save-clusters                     : Save clusters" << std::endl;
-    std::cout << "\t--is-mc                             : The data is produced from Monte Carlo Simulation" << std::endl;
   }
 
   void reportError(std::string error) {
@@ -84,8 +82,6 @@ public:
         createHistograms = true;
       } else if (!arg.compare("--save-clusters")) {
         saveClusters = true;
-      } else if (!arg.compare("-is-mc")) {
-        isMC = true;
       } else if (iter->compare(0, 2, "-v") == 0) {
         ; // verbosity already parsed but avoid error
       } else if (!arg.compare("-h") || !arg.compare("--help")) {

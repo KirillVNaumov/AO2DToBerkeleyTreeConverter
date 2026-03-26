@@ -25,8 +25,6 @@
   /* TH2F */                                                        \
   defH2(hClusterM02vsE, "Cluster M02 vs E", 300, 0, 3, 100, 0, 100)
 
-// TODO: MC truth information
-
 class TFile;
 
 class Event;
@@ -59,13 +57,21 @@ class Converter {
   YAML::Node treecuts;
   YAML::Node eventCuts;
   YAML::Node trackCuts;
+  YAML::Node clusterCuts;
+
+  void readConfig();
+  float event_zvtx_cut;
+  float event_clus_E_min;
+  float track_pt_min;
+  float track_eta_min;
+  float track_eta_max;
+  int cluster_definition;
+  float cluster_E_min;
 
   void createQAHistos();
   void createTree();
 
   void writeEvents(TTree *tree, std::vector<Event> &events);
-
-  void doEventSelection(std::vector<Event> &events);
 
   void doAnalysis(std::vector<Event> &events);
 
@@ -74,17 +80,16 @@ class Converter {
   // define global switches
   bool createHistograms;
   bool saveClusters;
-  bool isMC;
 
 public:
   void processFile(TFile *file);
 
-  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters, bool isMC)
-      : createHistograms(createHistograms), saveClusters(saveClusters), isMC(isMC) {
+  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters)
+      : createHistograms(createHistograms), saveClusters(saveClusters) {
     outFile = new TFile(outputFilename.Data(), "RECREATE");
 
     treecuts = YAML::LoadFile(configFile.Data());
-
+    readConfig();
     if (createHistograms) {
       createQAHistos();
     }
