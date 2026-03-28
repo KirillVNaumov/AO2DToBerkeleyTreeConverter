@@ -112,7 +112,7 @@ class HyperDownloader:
         log.addHandler(fh)
 
         log.info( "Starting HyperDownloader...")
-        log.info(f"Reading HyperDownloader configuration from: {config_file}")
+        log.info(f"Reading HyperDownloader configuration from: {self.config_file}")
 
         self.train = cfg["download"]["train"]
         self.hyperdirs = cfg["download"]["hyperdirs"].split(",")

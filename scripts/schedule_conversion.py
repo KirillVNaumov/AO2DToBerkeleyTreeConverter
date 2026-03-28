@@ -154,14 +154,14 @@ class Converter:
 
         if self.is_test:
             result = subprocess.run(f"/usr/bin/bash {self.output}/convert.sh", shell = True)
+            log.info("Starting test conversion.")
             if result.returncode != 0:
                 log.error("Test conversion crashed, exiting.")
                 sys.exit(result.returncode)
-            treecmd = "/usr/bin/bash"
+            log.info("Test conversion succeeded.")
         else:
-            job_id = subprocess.run(f"sbatch --parsable {self.output}/convert.sh", stdout = subprocess.PIPE, stderr = subprocess.PIPE).stdout.strip()
+            job_id = subprocess.run(["sbatch", "--parsable", f"{self.output}/convert.sh"], stdout = subprocess.PIPE, stderr = subprocess.PIPE, encoding = "utf-8").stdout.strip()
             log.info(f"Submitted conversion batch job: ID {job_id}")
-            treecmd = f"sbatch --dependency=afterok:{job_id}"
 
         with open(f"{self.base_path}/templates/treelist_nersc.tmpl", 'r') as f:
             contents = f.read()
@@ -170,11 +170,21 @@ class Converter:
         contents = contents.replace("{{SLURM_OUT}}", self.slurm_output)
         contents = contents.replace("{{TREE_NAME}}", self.tree_name)
         contents = contents.replace("{{ROOT_PACK}}", self.root_spec)
+        contents = contents.replace("{{NOTIFY_OPTS}}", notify)
 
         with open(f"{self.output}/treelist.sh", 'w') as f:
             f.write(contents)
 
-        subprocess.run(f"{treecmd} {self.output}/treelist.sh", shell = True, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        if self.is_test:
+            log.info("Creating treelist.")
+            result = subprocess.run(["/usr/bin/bash", f"{self.output}/treelist.sh"], encoding = "utf-8")
+            if result.returncode != 0:
+                log.error("Treelist creation crashed, exiting.")
+                sys.exit(result.returncode)
+            log.info("Treelist creation succeeded.")
+        else:
+            job_id = subprocess.run(["sbatch", "--parsable", f"--dependency=afterok:{job_id}", f"{self.output}/treelist.sh"], stdout = subprocess.PIPE, stderr = subprocess.PIPE, encoding = "utf-8").stdout.strip()
+            log.info(f"Submitted tree finder batch job: ID {job_id}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert a list of files', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
