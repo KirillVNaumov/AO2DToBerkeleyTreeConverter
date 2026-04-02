@@ -1,0 +1,24 @@
+dataset: LHC25ae
+
+download:
+  train: 631181
+  hyperdirs: /alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4355701/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4355703/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4355704/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4355705/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4355750/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4356146/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4356182/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4356183/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0435/hy_4356209/AOD
+  filename: AO2D.root
+  nthreads: 20
+  ntries: 5
+  timeout: 300
+
+convert:
+  test: false
+  email: tucker_hwang@berkeley.edu
+  naod: 5
+  save_clusters: false
+  recompile: false
+
+
+  event_cuts:
+    zvtx_cut: 10
+  track_cuts:
+    pt_min: 0.150
+    eta_min: -2
+    eta_max: 2

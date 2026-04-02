@@ -1,0 +1,24 @@
+dataset: LHC24_ppref
+
+download:
+  train: 626869
+  hyperdirs: /alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304092/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304093/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304101/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304102/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304103/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304105/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304106/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304095/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304096/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304097/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304098/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304099/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4304100/AOD
+  filename: AO2D.root
+  nthreads: 80
+  ntries: 5
+
+
+convert:
+  test: false
+  email: tucker_hwang@berkeley.edu
+  naod: 12
+  save_clusters: false
+  recompile: false
+
+
+  event_cuts:
+    zvtx_cut: 10
+  track_cuts:
+    pt_min: 0.150
+    eta_min: -2
+    eta_max: 2

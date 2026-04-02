@@ -1,0 +1,24 @@
+dataset: LHC24ar
+
+download:
+  train: 626871
+  hyperdirs: /alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305790/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305792/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305692/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305476/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305481/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305493/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305495/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305710/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305714/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305149/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305483/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305727/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305728/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305739/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305147/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305473/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305474/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305477/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305478/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305479/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305492/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305512/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305513/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305754/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305144/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305145/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305146/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305150/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305490/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305791/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305794/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305798/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305799/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305800/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305801/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305802/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305803/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305804/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305805/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305806/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305807/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305808/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305809/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305810/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305811/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305812/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305813/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305814/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305815/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305816/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305817/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305818/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305819/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305820/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305821/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305822/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305823/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305824/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305475/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305755/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305756/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305757/AOD,/alice/cern.ch/user/a/alihyperloop/jobs/0430/hy_4305793/AOD
+  filename: AO2D.root
+  nthreads: 30
+  ntries: 1
+  timeout: 120
+
+convert:
+  test: false
+  email: tucker_hwang@berkeley.edu
+  naod: 5
+  save_clusters: false
+  recompile: false
+
+
+  event_cuts:
+    zvtx_cut: 10
+  track_cuts:
+    pt_min: 0.150
+    eta_min: -2
+    eta_max: 2
