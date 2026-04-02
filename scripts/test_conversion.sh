@@ -3,82 +3,111 @@
 #### TEST CONVERSION ON SINGLE AO2D ####
 
 show_help() {
-  cat << EOF
+    cat << EOF
 Usage: test-conversion [OPTIONS]
 
 Options:
-  -c, --compile   Recompile converter
-  -h, --help      Show this help message
+  -c, --config  Path to config file
+  -i, --input   Path to input file
+  -o, --output  Path to output file. Set to /global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/testing/BerkeleyTree.root by default.
+  -h, --help    Show this help message
 
 EOF
 }
 
-PARSEDARGS=$(getopt -o ch \
-          --long compile,help \
-          -n 'test-conversion' -- "$@")
+PARSEDARGS=$(getopt -o c:i:o:h \
+                    --long compile,config:,input:,output:,help \
+                    -n 'test-conversion' -- "$@")
 PARSE_EXIT=$?
 if [ $PARSE_EXIT -ne 0 ] ; then exit $PARSE_EXIT ; fi
 
 # NOTE: quotes around PARSEDARGS essential to parse spaces between parsed options
 eval set -- "$PARSEDARGS"
 
-compile=
+config=
+input=
+output=/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/$USER/testing/BerkeleyTree.root
 
 while true; do
-  case "$1" in
-    -c | --convert )  compile="true"; shift ;;
-    -h | --help )     show_help; exit 0 ;;
-    -- ) shift; break ;;
-    * ) break ;;
-  esac
+    case "$1" in
+        -c | --config ) config="$2";    shift 2 ;;
+        -i | --input )  input="$2";     shift 2 ;;
+        -o | --output ) output="$2";    shift 2 ;;
+        -h | --help )   show_help; exit 0 ;;
+        -- ) shift; break ;;
+        * ) break ;;
+    esac
 done
 
 project_root="$(dirname -- "$(realpath "$0")")/../"
 project_root="$( realpath "$project_root" )"
-output=/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/mhwang/convert_test
-config_file=$project_root/tree-cuts.yaml
-filelist=/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/mhwang/LHC22o_test/BerkeleyTrees/AOD_list.txt
-# filelist=/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/staging/mhwang/LHC24aj/AO2D/filelist_AO2D_root.txt
+. "$project_root/scripts/util.sh"
 
-start=1
-stop=1
+if [ -z "$input"  ]; then error "Specify input file with -i / --input <path/to/file>"; exit 1; fi
+if [ -z "$config" ]; then error "Specify config file with -c / --config <path/to/config>"; exit 1; fi
+
+mkdir -p "$( dirname -- "$output" )"
+output="$( realpath "$output" )"
+output_dir="$( dirname -- "$output" )"
+input="$( realpath "$input" )"
+
+save_clusters="$( yq r "$config" 'convert.save_clusters' )"
+if [ "${save_clusters,,}" == "true" ]; then
+    cluster_opt="--save-clusters"
+else
+    cluster_opt=""
+fi
+verbosity="$( yq r "$config" 'convert.verbosity' )"
+if [ "$verbosity" == "" ]; then
+    # empty string is equal to zero so explicitly check empty string first
+    verbosity_opt="-v"
+elif [[ "$verbosity" -eq 0 ]]; then
+    echo here
+    verbosity_opt=""
+else
+    verbosity_opt="-"
+    for _ in $(seq 1 "$verbosity"); do
+        verbosity_opt="${verbosity_opt}v"
+    done
+fi
+recompile="$( yq r "$config" 'convert.recompile' )"
+if [ "${recompile,,}" == "true" ]; then
+    # empty string is equal to zero so explicitly check empty string first
+    recompile_opt="true"
+else
+    recompile_opt=""
+fi
+
+info "Config file: $config"
+info "Input file: $input"
+info "Output directory: $output_dir"
+info "Output file: $output"
+info "Recompile: $recompile_opt"
+info "Cluster option: $cluster_opt"
+info "Verbosity: $verbosity_opt"
 
 SHIFTER=("shifter" "--module=cvmfs" "--image=tch285/o2alma:latest")
 ALIENV="/cvmfs/alice.cern.ch/bin/alienv"
-# PYTHON_PACK="xjalienfs/1.6.9-1" # provides rich module
 ROOT_PACK="ROOT/v6-36-04-alice2-2"
-buildopt=( "-C" "$project_root" "BUILD=debug" )
-. "$project_root/scripts/util.sh"
 
-input_txt=$output/input.txt
-rm -f "$input_txt"
-mkdir -p "$output"
-output_file="$output/BerkeleyTree.root"
+input_txt="$output_dir/input.txt"
+echo "$input" > "$input_txt"
 
-info "File(s) to be converted: "
-for (( file_idx = start; file_idx <= stop; file_idx++ )); do
-  input_file=$(sed -n "${file_idx}p" $filelist)
-  info "  $input_file"
-  echo "$input_file" >> "$input_txt"
-done
-
-if [[ -n "$compile" ]]; then
-  # pretty shifter --image=tch285/converter:latest make remake -C /global/common/software/alice/mhwang/converter
-  info "Starting compilation."
-  pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
-    make remake "${buildopt[@]}"
-  check_exit $? "Compilation failed!"
-  info "Finished compilation."
+if [ -n "$recompile_opt" ]; then
+    info "Starting compilation."
+    pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
+        make remake -C "$project_root"
+    check_exit $? "Compilation failed!"
+    info "Finished compilation."
 else
-  info "Skipping compilation."
+    info "Skipping compilation."
 fi
 
-# cmd="shifter --image=tch285/converter:latest /global/common/software/alice/mhwang/converter/bin/converter \
-#       -i $input_txt -o $output_file -c $config_file"
 info "Starting conversion."
 pretty "${SHIFTER[@]}" $ALIENV setenv $ROOT_PACK -c \
-        "$project_root/bin/converter" \
-        -i $input_txt -o $output_file -c "$config_file"
-# $cmd
+                "$project_root/bin/converter" \
+                -i "$input_txt" -o "$output" -c "$config" \
+                "$cluster_opt" "$verbosity_opt"
+
 ecode=$?
 info "Finished conversion with code $ecode."
