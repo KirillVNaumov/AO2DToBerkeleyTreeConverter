@@ -70,7 +70,8 @@ class Converter:
         log.info(f"  Recompile converter: {self.recompile}")
         log.info(f"  Verbosity: {self.verbosity}")
         log.info( "  Conversion settings:")
-        for category in ['event_cuts', 'track_cuts', 'cluster_cuts']:
+        categories = [category for category in ['event_cuts', 'track_cuts', 'cluster_cuts'] if category in cfg['convert']]
+        for category in categories:
             log.info(f"    {category}:")
             settings = cfg['convert'][category]
             for param, value in settings.items():
@@ -153,8 +154,8 @@ class Converter:
             f.write(contents)
 
         if self.is_test:
-            result = subprocess.run(f"/usr/bin/bash {self.output}/convert.sh", shell = True)
             log.info("Starting test conversion.")
+            result = subprocess.run(f"/usr/bin/bash {self.output}/convert.sh", shell = True)
             if result.returncode != 0:
                 log.error("Test conversion crashed, exiting.")
                 sys.exit(result.returncode)
