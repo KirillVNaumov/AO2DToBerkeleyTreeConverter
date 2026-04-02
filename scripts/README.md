@@ -14,6 +14,7 @@ This section describes the general usage of the downloader (`download_hyperloop.
   - [Converter configuration](#converter-configuration)
   - [Converter cuts](#converter-cuts)
   - [Converter output](#converter-output)
+  - [Test converter](#test-converter)
 - [Perlmutter vs. Hiccup](#perlmutter-vs-hiccup)
 
 ## The configuration file
@@ -114,6 +115,14 @@ In general, if the cut is not specified (i.e. the key is not present in the conf
 ### Converter output
 
 The converter will compile (if necessary) the converter, then construct a conversion batch script to convert these AO2Ds into BerkeleyTrees. If run in test mode, the converter will run this script directly to convert a set of AO2Ds into a single BerkeleyTree, as well as show the standard output to the console. If run in production mode, the converter will submit this batch script via `sbatch`. It will also submit a dependency job to save a filelist of the produced trees once they are all converted. **It is highly recommend testing with `test: True` first before scheduling the full conversion, to make sure all cuts are applied properly and everything looks normal.**
+
+### Test converter
+
+In the case that a dataset hasn't been downloaded from the Grid, but you have an AO2D that you want to convert, use the `test_conversion.sh` script.
+
+```bash
+scripts/test_conversion.sh -c <path/to/config> -o <path/to/output/file> -i <path/to/input/AO2D/file>
+```
 
 ## Perlmutter vs. Hiccup
 
