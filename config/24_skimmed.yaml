@@ -19,9 +19,9 @@ convert:
   event_cuts:
     zvtx_cut: 10
   track_cuts:
-    pt_min: 0.150
-    eta_min: -2
-    eta_max: 2
+    pt_min: 0.15
+    eta_min: -5
+    eta_max: 5
   cluster_cuts:
-    E_min: 0.
-    definition: 0
+    E_min: -1
+    definition: -1
