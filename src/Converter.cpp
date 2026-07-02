@@ -40,6 +40,7 @@ void Converter::createTree() {
   outputTree->Branch("multiplicity", &fBuffer_multiplicity);
   outputTree->Branch("centrality", &fBuffer_centrality);
   outputTree->Branch("occupancy", &fBuffer_trackOccupancyInTimeRange);
+  outputTree->Branch("vtx_z", &fBuffer_vtxZ);
   outputTree->Branch("event_sel", &fBuffer_eventSel);
   outputTree->Branch("trig_sel", &fBuffer_triggerSel);
   outputTree->Branch("rct", &fBuffer_rct);
@@ -123,12 +124,13 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
 
     // fill event level properties
     fBuffer_runNumber = (Int_t)ev.col.runNumber;
+    fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
+    fBuffer_centrality = (Float_t)ev.col.centrality;
+    fBuffer_trackOccupancyInTimeRange = (Int_t)ev.col.trackOccupancyInTimeRange;
+    fBuffer_vtxZ = (Float_t)ev.col.posZ;
     fBuffer_eventSel = (UShort_t)ev.col.eventSel;
     fBuffer_triggerSel = (ULong64_t)ev.col.triggerSel;
     fBuffer_rct = (UInt_t)ev.col.rct;
-    fBuffer_trackOccupancyInTimeRange = (Int_t)ev.col.trackOccupancyInTimeRange;
-    fBuffer_centrality = (Float_t)ev.col.centrality;
-    fBuffer_multiplicity = (Float_t)ev.col.multiplicity;
 
     // fill track properties
     for (auto &tr : ev.tracks) {
@@ -252,6 +254,7 @@ void Converter::readConfig() {
     cluster_E_min = clusterCuts["E_min"].as<float>();
   logInfo("Cluster energy minimum: ", cluster_E_min);
 }
+
 void Converter::processFile(TFile *file) {
   std::vector<Event> events;
   int totalNumberOfEvents = 0;

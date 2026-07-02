@@ -15,6 +15,7 @@ Int_t     fBuffer_runNumber;
 Float_t   fBuffer_multiplicity;
 Float_t   fBuffer_centrality;
 Int_t     fBuffer_trackOccupancyInTimeRange;
+Float_t   fBuffer_vtxZ;
 UShort_t  fBuffer_eventSel;
 ULong64_t fBuffer_triggerSel;
 UInt_t    fBuffer_rct;
