@@ -4,3 +4,4 @@ scripts/slurm.sh
 *.d
 *.o
 *.code-workspace
+.markdownlint.json
