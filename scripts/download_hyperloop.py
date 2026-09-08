@@ -185,10 +185,19 @@ class HyperDownloader:
             aod_paths = self.get_aod_paths()
             log.info(f"Found {len(aod_paths)} AO2Ds.")
 
-        # HACK: Find the biggest number of slashes in aod_paths to get only files at lowest level
-        max_nslashes = max([path.count('/') for path in aod_paths])
-        aod_paths = [x for x in aod_paths if x.count('/') == max_nslashes]
-        log.info(f"Removed potential duplicates. Found {len(aod_paths)} files to download.")
+        if len(aod_paths) != len(set(aod_paths)):
+            log.critical("Found duplicate AO2D paths?")
+            seen = set()
+            duplicates = []
+
+            for aod_path in aod_paths:
+                if aod_path in seen:
+                    log.critical(f"Duplicate: {aod_path}")
+                else:
+                    seen.add(aod_path)
+            sys.exit(1)
+
+        log.info(f"No duplicate paths found. Found {len(aod_paths)} files to download.")
 
         # Set up GRID and local paths
         pairs = []
