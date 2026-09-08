@@ -33,9 +33,11 @@ class Converter:
     def configure(self, config_file):
         self.base_path = Path(__file__).resolve().parent.parent
         cfg = self.get_cfg(config_file)
+        self.is_mc = cfg["is_mc"]
+        subdir = "mc_central" if self.is_mc else "data"
         self.dataset = cfg["dataset"]
-        self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/{self.dataset}/AO2D/filelist.txt"
-        self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/{self.dataset}/BerkeleyTrees"
+        self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D/filelist.txt"
+        self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/BerkeleyTrees"
 
         os.makedirs(self.output, exist_ok = True)
         shutil.copy2(self.config_file, self.output)
@@ -63,19 +65,28 @@ class Converter:
         log.info(f"  Output directory: {self.output}")
         log.info(f"  Tree name: {self.tree_name}")
         log.info(f"  Test mode: {self.is_test}")
-        log.info(f"  Save clusters: {self.save_clusters}")
-        log.info(f"  Number of AO2Ds per tree: {self.naod}")
+        log.info(f"  Is MC: {self.is_mc}")
+        if not self.is_mc:
+            log.info(f"  Save clusters: {self.save_clusters}")
+        elif self.is_mc and "save_clusters" in cfg["convert"]:
+            log.warning(f"  Cluster saving setting will be ignored in MC conversion!")
+        log.info(f"  Number of AO2Ds per BerkeleyTree: {self.naod}")
         log.info(f"  ROOT package: {self.root_spec}")
         log.info(f"  Email: {self.email}")
         log.info(f"  Recompile converter: {self.recompile}")
         log.info(f"  Verbosity: {self.verbosity}")
-        log.info( "  Conversion settings:")
-        categories = [category for category in ['event_cuts', 'track_cuts', 'cluster_cuts'] if category in cfg['convert']]
-        for category in categories:
-            log.info(f"    {category}:")
-            settings = cfg['convert'][category]
-            for param, value in settings.items():
-                log.info(f"      {param}: {value}")
+        if not self.is_mc:
+            log.info( "  Conversion settings:")
+            categories = [category for category in ['event_cuts', 'track_cuts', 'cluster_cuts'] if category in cfg['convert']]
+            for category in categories:
+                log.info(f"    {category}:")
+                settings = cfg['convert'][category]
+                for param, value in settings.items():
+                    log.info(f"      {param}: {value}")
+        elif self.is_mc and any(category in cfg["convert"] for category in ['event_cuts', 'track_cuts', 'cluster_cuts']):
+            log.warning("Since this dataset is an MC dataset, cuts will be ignored.")
+
+        self.detect_mc()
 
         if not self.converter.is_file():
             log.warning("Converter executable does not exist, compiling now.")
@@ -85,7 +96,7 @@ class Converter:
             self.compile_converter()
         if not os.path.isfile(self.input):
             log.error(f"AO2D filelist at '{self.input}' does not exist!")
-            sys.exit(0)
+            sys.exit(1)
 
         self.slurm_output = f"{self.output}/slurm_out"
         os.makedirs(self.slurm_output, exist_ok = True)
@@ -117,6 +128,30 @@ class Converter:
             log.error("Compilation failed!")
             sys.exit(res.returncode)
 
+    def detect_mc(self):
+        log.info("Cross-checking MC/data origin from AO2D.root structure...")
+        with open(self.input, 'r') as f:
+            path = f.readline().strip() 
+        cmd = ("shifter --module=cvmfs --image=tch285/o2alma:latest "
+              f"/cvmfs/alice.cern.ch/bin/alienv setenv {self.root_spec} -c "
+              f"rootls {path}:*"
+        )
+        res = subprocess.run(cmd, shell = True, capture_output = True, encoding = 'utf-8')
+        if res.returncode != 0:
+            log.error(f"MC detection failed:\n{res.stdout}\n{res.stderr}")
+            sys.exit(res.returncode)
+        mc_detected = False
+        if "O2berkeleytree" in res.stdout:
+            mc_detected = True
+        if mc_detected != self.is_mc:
+            log.fatal(f"Config says is_MC: {self.is_mc} but input files say is_MC: {mc_detected}")
+            raise RuntimeError
+        log.info("MC/data origin are consistent.")
+        if self.is_mc:
+            log.info(f"Files will be converted as: MC")
+        else:
+            log.info(f"Files will be converted as: data")
+
     def schedule(self):
         if self.is_test:
             log.info("Running in local testing mode.")
@@ -133,6 +168,9 @@ class Converter:
         verbosity = ""
         if self.verbosity:
             verbosity = f"-{'v' * self.verbosity}"
+        mc_opt = ""
+        if self.is_mc:
+            mc_opt = "--is-mc"
 
         with open(f"{self.base_path}/templates/convert_nersc.tmpl", 'r') as f:
             contents = f.read()
@@ -148,6 +186,7 @@ class Converter:
         contents = contents.replace("{{CLUSTER_OPT}}", cluster)
         contents = contents.replace("{{CONVERTER_PATH}}", str(self.converter))
         contents = contents.replace("{{VERBOSITY}}", verbosity)
+        contents = contents.replace("{{MC_OPT}}", mc_opt)
         contents = contents.replace("{{ROOT_PACK}}", self.root_spec)
 
         with open(f"{self.output}/convert.sh", 'w') as f:

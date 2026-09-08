@@ -83,8 +83,12 @@ class HyperDownloader:
     def configure(self, config_file):
         cfg = self.get_cfg(config_file)
         self.dataset = cfg["dataset"]
+        self.is_mc = cfg["is_mc"]
 
-        self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/{self.dataset}/AO2D"
+        if self.is_mc:
+            self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/mc_central/{self.dataset}/AO2D"
+        else:
+            self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/{self.dataset}/AO2D"
 
         if not os.path.isdir(self.output) or not os.listdir(self.output):
             os.makedirs(self.output)
@@ -124,6 +128,7 @@ class HyperDownloader:
         log.info( "HyperDownloader configuration:")
         log.info(f"  Mode: {self.mode.name}")
         log.info(f"  Dataset: {self.dataset}")
+        log.info(f"  Is MC: {self.is_mc}")
         log.info(f"  Output directory: {self.output}")
         log.info(f"  Train: {self.train}")
         log.info(f"  Number of Hyperloop directories: {len(self.hyperdirs)}")
@@ -376,6 +381,7 @@ class HyperDownloader:
         o2physics_ver   = self.get_o2physics_version()
         dirlist         = '\n'.join([f"- {dirname}" for dirname in self.hyperdirs])
 
+        origin = "MC" if self.is_mc else "Data"
         readme = (  f"# HYPERDOWNLOADER\n\n"
                     f"Dataset downloaded on {dt}\n\n"
                     "## Converter\n\n"
@@ -387,6 +393,7 @@ class HyperDownloader:
                     f"## Configuration\n\n"
                     f"- Mode: {self.mode.name}\n"
                     f"- Dataset: {self.dataset}\n"
+                    f"- MC/Data: {origin}\n"
                     f"- Train: {self.train}\n"
                     f"- Filename: {self.filename}\n"
                     f"- Number of threads: {self.nthreads}\n"
@@ -408,7 +415,7 @@ class HyperDownloader:
 
     def get_o2physics_version(self, json_file = "full_config.json"):
         try:
-            train_prefix = f"{self.train // 10000:04d}" # cut off last four digits and pad with zeroes on left side
+            train_prefix = f"{self.train // 10000:04d}" # cut off last four digits and left pad with zeroes
             search_path = f"/alice/cern.ch/user/a/alihyperloop/outputs/{train_prefix}/{self.train}"
             cmd = subprocess.run(f'alien_find {search_path} {json_file}', shell = True, encoding = 'utf-8',
                                     stdout = subprocess.PIPE, stderr = subprocess.PIPE)

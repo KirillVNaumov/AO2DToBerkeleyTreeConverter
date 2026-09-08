@@ -36,7 +36,7 @@ class Converter {
 #undef DECLARE_HISTOGRAMS
 
   TFile *outFile;
-
+  TString outputFilename;
   // Histograms for QA purposes
   TList *outputhists;
 
@@ -77,32 +77,27 @@ class Converter {
 
   void clearBuffers();
 
+  bool isValidDFName(const TString &name);
+  static bool lessByIndex(const TString &a, const TString &b);
+  int validateInputFiles(const std::vector<TString> &inputFiles,
+                         const TString &treeName,
+                         std::vector<TString> &treePaths);
   // define global switches
   bool createHistograms;
   bool saveClusters;
+  bool isMC;
 
 public:
-  void processFile(TFile *file);
+  int processFiles(std::vector<TString> filelist);
+  void processFilesData(std::vector<TString> filelist);
+  void processFileData(TFile *file);
+  int processFilesMC(const std::vector<TString>& filelist, const int numGoodFiles, bool fastClone);
 
-  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters)
-      : createHistograms(createHistograms), saveClusters(saveClusters) {
-    outFile = new TFile(outputFilename.Data(), "RECREATE");
+  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters, bool isMC)
+      : outputFilename(outputFilename), createHistograms(createHistograms), saveClusters(saveClusters), isMC(isMC) {
 
     treecuts = YAML::LoadFile(configFile.Data());
-    readConfig();
-    if (createHistograms) {
-      createQAHistos();
-    }
-    createTree();
-  }
-
-  ~Converter() {
-    outFile->cd();
-    outputTree->Write("", TObject::kOverwrite);
-    if (createHistograms) {
-      outputhists->Write();
-    }
-    outFile->Close();
+    if (!isMC) readConfig();
   }
 };
 

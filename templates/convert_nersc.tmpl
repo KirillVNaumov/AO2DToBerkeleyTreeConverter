@@ -22,7 +22,7 @@ fi
 shifter_cmd="shifter --image=tch285/o2alma:latest"
 
 FILELIST={{INPUT_FILELIST}}
-NFILES=$(wc -l < $FILELIST)
+NFILES=$(sed -n '$=' < $FILELIST)
 NJOBS={{NJOBS}}
 NFILES_PER_TREE={{NFILES_PER_TREE}}
 echo "Total number of AO2Ds to convert: ${NFILES}"
@@ -57,8 +57,9 @@ done
 cmd="$shifter_cmd --module=cvmfs \
     /cvmfs/alice.cern.ch/bin/alienv setenv {{ROOT_PACK}} -c \
     {{CONVERTER_PATH}} \
-      -i $input_txt -o $output_file -c $config_file {{CLUSTER_OPT}} {{VERBOSITY}}"
+      -i $input_txt -o $output_file -c $config_file {{CLUSTER_OPT}} {{MC_OPT}} {{VERBOSITY}}"
 echo "Conversion command: $cmd"
 $cmd
 ecode=$?
 echo "Conversion ended with code $ecode."
+exit $ecode

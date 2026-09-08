@@ -15,6 +15,7 @@ public:
   std::string configFile;
   bool createHistograms = false;
   bool saveClusters = false;
+  bool isMC = false;
 
   void displayHelp() {
     std::cout << "./converter [args]" << std::endl;
@@ -23,6 +24,7 @@ public:
     std::cout << "\t--config-file=<file>, -c <file>     : YAML files with cuts to be done to the converted data" << std::endl;
     std::cout << "\t--create-histograms                 : Create histograms from the converted data" << std::endl;
     std::cout << "\t--save-clusters                     : Save clusters" << std::endl;
+    std::cout << "\t--is-mc                             : Is an MC dataset" << std::endl;
   }
 
   void reportError(std::string error) {
@@ -82,6 +84,8 @@ public:
         createHistograms = true;
       } else if (!arg.compare("--save-clusters")) {
         saveClusters = true;
+      } else if (!arg.compare("--is-mc")) {
+        isMC = true;
       } else if (iter->compare(0, 2, "-v") == 0) {
         ; // verbosity already parsed but avoid error
       } else if (!arg.compare("-h") || !arg.compare("--help")) {

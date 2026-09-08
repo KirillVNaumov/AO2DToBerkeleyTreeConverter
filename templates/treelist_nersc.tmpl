@@ -52,6 +52,10 @@ echo "  branches:" >> "$tstruct"
 # Get branch names using rootls and format as YAML list
 $cmd rootls -t "$tree_file:$tree_name" | tail -n +2 | while read -r line; do
     if [[ ! $line == *\"*\"* ]]; then
+        # filter out any rows that aren't about the TTree columns
+        continue
+    elif [[ "$line" == *_size'/'* ]]; then
+        # filter out the size columns for MC conversions (none already in data conversions)
         continue
     fi
     branch=$(echo "$line" | cut -d' ' -f1)

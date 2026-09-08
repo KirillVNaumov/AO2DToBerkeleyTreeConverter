@@ -4,6 +4,7 @@
 
 #include "TROOT.h"
 #include "TRint.h"
+#include "TChain.h"
 
 
 void Converter::createQAHistos() {
@@ -255,7 +256,7 @@ void Converter::readConfig() {
   logInfo("Cluster energy minimum: ", cluster_E_min);
 }
 
-void Converter::processFile(TFile *file) {
+void Converter::processFileData(TFile *file) {
   std::vector<Event> events;
   int totalNumberOfEvents = 0;
   // loop over all directories and print name
@@ -312,3 +313,223 @@ void Converter::processFile(TFile *file) {
   logInfo("Total DFs: ", count);
   logInfo("Total events: ", totalNumberOfEvents);
 }
+
+int Converter::processFiles(std::vector<TString> filelist) {
+  if (isMC) {
+    std::vector<TString> treePaths;
+    int numBadFiles = validateInputFiles(filelist, "O2berkeleytree", treePaths);
+    if (numBadFiles != 0) return numBadFiles;
+    return processFilesMC(treePaths, filelist.size(), false);
+  }
+  else {
+    processFilesData(filelist);
+    return 0;
+  }
+}
+
+void Converter::processFilesData(std::vector<TString> filelist) {
+  outFile = new TFile(outputFilename.Data(), "RECREATE");
+  if (createHistograms) {
+    createQAHistos();
+  }
+  createTree();
+
+  for (size_t i = 0; i < filelist.size(); i++) {
+    TString filePath = filelist.at(i);
+    logInfo("-> Processing file ", filePath);
+    TFile *in = new TFile(filePath.Data());
+    if (!in || in->IsZombie()) std::runtime_error("TFile " + filePath + "not found!");
+    processFileData(in);
+    in->Close();
+  }
+  outFile->cd();
+  outputTree->Write("", TObject::kOverwrite);
+  if (createHistograms) {
+    outputhists->Write();
+  }
+  outFile->Close();
+}
+
+// check directory name
+bool Converter::isValidDFName(const TString &name)
+{
+   if (!name.BeginsWith("DF_"))
+      return false;
+   const TString suffix = name(3, name.Length() - 3);
+   return suffix.Length() > 0 && suffix.IsDigit();
+}
+
+// sort DF names
+bool Converter::lessByIndex(const TString &a, const TString &b)
+{
+   const TString sa = a(3, a.Length() - 3);
+   const TString sb = b(3, b.Length() - 3);
+   if (sa.Length() != sb.Length())
+      return sa.Length() < sb.Length();
+   return sa < sb;
+}
+
+// check input file structure
+//    is openable and not Zombie
+//    top-level TDirectories are in DF_* format
+//    at least one DF directory
+//    each directory has one TTree named treename
+// Every bad file is reported on stderr, with all of its problems listed, and
+// then dropped. Returns number of OK files, and fills `treePaths` with the OK
+// paths "file.root?#DF_<n>/<treeName>" of good files only, ordered by
+// input file and then by directory index (set a fixed directory order so it's reproducible)
+int Converter::validateInputFiles(const std::vector<TString> &inputFiles,
+                                  const TString &treeName,
+                                  std::vector<TString> &treePaths)
+{
+  treePaths.clear();
+
+  int numGoodFiles = 0;
+  std::vector<TString> report; // one entry per bad file
+  std::set<TString> seenFiles;
+
+  if (treeName.IsNull()) {
+    logCritical("validateInputFiles: empty tree name");
+    return 0;
+  }
+
+  for (const TString &fileName : inputFiles) {
+    if (!seenFiles.insert(fileName).second) {
+      report.push_back(fileName + "\n    duplicate entry in the input list");
+      continue;
+    }
+
+    TFile *fin = TFile::Open(fileName.Data(), "READ");
+    if (!fin || fin->IsZombie()) {
+      delete fin;
+      report.push_back(fileName + "\n    cannot be opened");
+      continue;
+    }
+
+    std::vector<TString> dirs;
+    TString problems;
+
+    std::set<TString> seenKeys; // collapse multiple cycles of the same key
+    TIter nextkey(fin->GetListOfKeys());
+    while (TKey *key = static_cast<TKey *>(nextkey())) {
+      const TString name = key->GetName();
+      if (!seenKeys.insert(name).second)
+        continue;
+
+      TClass *cl = TClass::GetClass(key->GetClassName());
+      if (!cl || !cl->InheritsFrom(TDirectoryFile::Class())) {
+        logInfo("   [NOTE] ", fileName , ": ignoring top-level ", key->GetClassName(), " '" , name, "'");
+        continue;
+      }
+
+      if (!isValidDFName(name)) {
+        problems += "\n    directory does not match DF_<number>: " + name;
+        continue;
+      }
+
+      TDirectory *dir = fin->GetDirectory(name);
+      if (!dir) {
+        problems += "\n    cannot descend into directory: " + name;
+        continue;
+      }
+
+      TKey *tkey = dir->GetKey(treeName);
+      if (!tkey) {
+        problems += TString::Format("\n    no object '%s' in directory %s",
+                                    treeName.Data(), name.Data());
+        continue;
+      }
+
+      TClass *tcl = TClass::GetClass(tkey->GetClassName());
+      if (!tcl || !tcl->InheritsFrom(TTree::Class())) {
+        problems += TString::Format("\n    %s/%s is a %s, not a TTree",
+                                    name.Data(), treeName.Data(),
+                                    tkey->GetClassName());
+        continue;
+      }
+
+      dirs.push_back(name);
+    }
+
+    fin->Close(); // TChain will reopen the file itself later
+    delete fin;
+
+    if (dirs.empty() && problems.IsNull())
+      problems += "\n    no DF_<number> directories found";
+
+    if (!problems.IsNull()) {
+      report.push_back(fileName + problems);
+      continue;
+    }
+
+    std::sort(dirs.begin(), dirs.end(), lessByIndex);
+    for (const TString &d : dirs)
+      treePaths.push_back(TString::Format("%s?#%s/%s", fileName.Data(), d.Data(), treeName.Data()));
+
+    logInfo("   [OK] ", fileName, " (", dirs.size(), " DF_* directories)");
+    numGoodFiles += 1;
+  }
+
+  if (!report.empty()) {
+    std::stringstream ss;
+    ss << std::endl << report.size() << " file(s) failed the structure check:";
+    for (const TString &r : report)
+      ss << std::endl << "  " << r;
+
+    logError(ss.str());
+  }
+
+  logInfo("Validated ", inputFiles.size(), " file(s): ", numGoodFiles, " good, ",
+          (inputFiles.size() - numGoodFiles), " bad, ", treePaths.size(), " tree(s) to merge");
+
+  return inputFiles.size() - numGoodFiles;
+}
+
+// returns 1 on failure, 0 on OK
+int Converter::processFilesMC(const std::vector<TString> &treePaths,
+                              const int numGoodFiles,
+                              bool fastClone = false)
+{
+  if (treePaths.empty()) {
+    logError("mergeTrees: nothing to merge");
+    return 1;
+  }
+  const TString treeName = "eventTree";
+  TChain chain(treeName);
+  logInfo("Merging the following directories and TTrees:");
+  for (const TString &p : treePaths) {
+    logInfo("  ", p.Data());
+    if (chain.Add(p.Data()) == 0) {
+      logError("mergeTrees: could not add ", p);
+      return 1;
+    }
+  }
+
+  const Long64_t nIn = chain.GetEntries();
+  if (nIn == 0) {
+    logError("mergeTrees: the chain is empty");
+    return 1;
+  }
+  logInfo("Merging ", nIn, " entries from ", treePaths.size(), " TTree(s) in ", numGoodFiles, " AO2Ds into one BerkeleyTree...");
+
+  // check on 100 GB limit so ROOT doesn't silently spill into outputFilename_1.root, etc.
+  // sorta unnecessary since files should never get this big but just in case
+  TTree::SetMaxTreeSize(1000LL * 1024 * 1024 * 1024);
+
+  // Merge() creates file, writes tree and closes file
+  // returns the number of output files, 0 on failure (i.e no files produced).
+  const Long64_t nFiles = chain.Merge(outputFilename.Data(),
+                                      fastClone ? "fast" : "");
+  if (nFiles == 0) {
+    logError("mergeTrees: merging failed");
+    return 1;
+  }
+  if (nFiles > 1) {
+    logError("mergeTrees: output spilled into ", nFiles, " files");
+    return 1;
+  }
+
+  logInfo("Wrote '", treeName, "' with ", nIn, " entries to '", outputFilename, "'\n");
+  return 0;
+}
+
