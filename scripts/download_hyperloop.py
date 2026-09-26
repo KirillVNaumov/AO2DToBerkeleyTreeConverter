@@ -83,12 +83,12 @@ class HyperDownloader:
     def configure(self, config_file):
         cfg = self.get_cfg(config_file)
         self.dataset = cfg["dataset"]
-        self.is_mc = cfg["is_mc"]
+        self.hyperdirs = cfg["download"]["hyperdirs"].split(",")
+        self.filename = cfg["download"].get("filename", self._defaults["filename"])
+        self.is_mc = self.get_origin()
 
-        if self.is_mc:
-            self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/mc_central/{self.dataset}/AO2D"
-        else:
-            self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/data/{self.dataset}/AO2D"
+        subdir = "mc_central" if self.is_mc else "data"
+        self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D"
 
         if not os.path.isdir(self.output) or not os.listdir(self.output):
             os.makedirs(self.output)
@@ -119,8 +119,6 @@ class HyperDownloader:
         log.info(f"Reading HyperDownloader configuration from: {self.config_file}")
 
         self.train = cfg["download"]["train"]
-        self.hyperdirs = cfg["download"]["hyperdirs"].split(",")
-        self.filename = cfg["download"].get("filename", self._defaults["filename"])
         self.nthreads = cfg["download"].get("nthreads", self._defaults["nthreads"])
         self.ntries = cfg["download"].get("ntries", self._defaults["ntries"])
         self.timeout = cfg["download"].get("timeout", self._defaults["timeout"])
@@ -154,6 +152,65 @@ class HyperDownloader:
         with open(self.config_file) as stream:
             cfg = yaml.safe_load(stream)
         return cfg
+
+    def get_origin(self):
+        log.info("Inspecting AO2Ds to determine data/MC origin...")
+        aod_path = None
+        for hydir in self.hyperdirs:
+            try:
+                aod_path = subprocess.run(f'alien_find -l 1 {hydir} {self.filename}', shell = True, encoding = 'utf-8',
+                                            capture_output = True, check = True).stdout.strip().split('\n')[0]
+                log.info(f"  Found test file: {aod_path}")
+                break
+            except subprocess.CalledProcessError as e:
+                log.error(f"Failed to find {self.filename} in {hydir}: {e}")
+                log.error("Trying next Hyperloop directory...")
+        if aod_path is None:
+            log.critical("Failed to find AO2Ds in Hyperloop directories.")
+            log.critical("Data/MC origin autodetection failed.")
+            sys.exit(1)
+
+        cmd = (
+            "root -l -b -q -e '"
+            f"TGrid::Connect(\"alien://\"); TFile* f = TFile::Open(\"alien://{aod_path}\");"
+            "if(!f || f->IsZombie() || f->TestBit(TFile::kRecovered)) return 1;"
+            "TDirectory* d = nullptr;"
+            "for (TObject* o : *f->GetListOfKeys()){"
+                "TKey* k = (TKey*)o;"
+                "TClass* c = gROOT->GetClass(k->GetClassName());"
+                "if(c && c->InheritsFrom(TDirectory::Class())) { d = (TDirectory*)k->ReadObj(); break; }"
+            "}"
+            "if(d) for (TObject* o : *d->GetListOfKeys()) std::cout << ((TKey*)o)->GetName() << \"\\n\";"
+            "f->Close();"
+            "return 0;'"
+        )
+
+        log.info("  Inspecting test file... (may take some time)")
+        try:
+            found_trees = subprocess.run(cmd, shell = True, encoding = 'utf-8', capture_output = True, check = True, timeout=60).stdout.strip().split('\n')
+            log.info(f"  Found TTrees in test file: {', '.join(found_trees)}")
+        except subprocess.CalledProcessError as e:
+            log.critical(f"  Failed to inspect test file for its contents: {e}")
+            log.critical("Data/MC origin autodetection failed.")
+            sys.exit(1)
+        except subprocess.TimeoutExpired:
+            log.critical("  Test file inspection timed out, please try again.")
+            sys.exit(1)
+
+        data_trees = ['O2jbc', 'O2jcollision', 'O2jtrack']
+        mc_tree = 'O2berkeleytree'
+        if all(tree in found_trees for tree in data_trees):
+            log.info("Detected origin: data")
+            return False
+        elif len(found_trees) == 1 and mc_tree in found_trees:
+            log.info("Detected origin: MC")
+            return True
+        else:
+            log.critical(f"  Found the following TTrees in AO2D: {found_trees}")
+            log.critical(f"  Required TTrees for data: {data_trees}")
+            log.critical(f"  Required TTree for MC (cannot have any other TTrees): {mc_tree}")
+            log.critical( "Data/MC origin autodetection failed.")
+            sys.exit(1)
 
     def check_alien(self):
         log.info("Checking AliEn token...")

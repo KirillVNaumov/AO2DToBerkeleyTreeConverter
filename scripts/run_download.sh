@@ -41,7 +41,7 @@ fi
 
 SHIFTER=("shifter" "--module=cvmfs" "--image=tch285/o2alma:latest")
 ALIENV="/cvmfs/alice.cern.ch/bin/alienv"
-PYTHON_PACK="xjalienfs/1.6.9-1" # provides rich module and AliEn tools
+PYTHON_PACK="JAliEn-ROOT/0.7.22-2" # provides rich module and AliEn tools, and ALICE ROOT
 
 check_cmd shifter
 

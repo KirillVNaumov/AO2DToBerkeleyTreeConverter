@@ -33,11 +33,12 @@ class Converter:
     def configure(self, config_file):
         self.base_path = Path(__file__).resolve().parent.parent
         cfg = self.get_cfg(config_file)
-        self.is_mc = cfg["is_mc"]
-        subdir = "mc_central" if self.is_mc else "data"
         self.dataset = cfg["dataset"]
+        self.is_mc = self.get_origin()
+        subdir = "mc_central" if self.is_mc else "data"
         self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D/filelist.txt"
         self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/BerkeleyTrees"
+        self.detect_mc()
 
         os.makedirs(self.output, exist_ok = True)
         shutil.copy2(self.config_file, self.output)
@@ -86,8 +87,6 @@ class Converter:
         elif self.is_mc and any(category in cfg["convert"] for category in ['event_cuts', 'track_cuts', 'cluster_cuts']):
             log.warning("Since this dataset is an MC dataset, cuts will be ignored.")
 
-        self.detect_mc()
-
         if not self.converter.is_file():
             log.warning("Converter executable does not exist, compiling now.")
             self.compile_converter()
@@ -128,29 +127,57 @@ class Converter:
             log.error("Compilation failed!")
             sys.exit(res.returncode)
 
+    def get_origin(self):
+        log.info("Determining dataset origin (data/MC) via directory search...")
+        template = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{{}}/{self.dataset}/AO2D/filelist.txt"
+        is_mc = False
+        is_data = False
+
+        # independently check whether there's a corresponding directory in `data` or `mc_central`
+        if os.path.isfile(template.format("data")):
+            is_data = True
+        if os.path.isfile(template.format("mc_central")):
+            is_mc = True
+
+        if is_data and is_mc:
+            # somehow found directories in both `data` and `mc_central`
+            log.critical(f"Found directories for both MC and data for dataset {self.dataset}?")
+            sys.exit(1)
+        elif not is_data and not is_mc:
+            # found no directories in either `data` or `mc_central`
+            log.critical(f"Could not find any data or MC directories for dataset {self.dataset}, has the dataset been downloaded?")
+            sys.exit(1)
+
+        name = "MC" if is_mc else "data"
+        log.info(f"Dataset origin (data/MC) identified: {name}")
+
+        return is_mc
+
     def detect_mc(self):
-        log.info("Cross-checking MC/data origin from AO2D.root structure...")
+        log.info("Cross-checking data/MC origin against AO2D contents...")
         with open(self.input, 'r') as f:
             path = f.readline().strip() 
-        cmd = ("shifter --module=cvmfs --image=tch285/o2alma:latest "
-              f"/cvmfs/alice.cern.ch/bin/alienv setenv {self.root_spec} -c "
+        cmd = ("shifter -m none --image=rootproject/root:latest "
               f"rootls {path}:*"
         )
-        res = subprocess.run(cmd, shell = True, capture_output = True, encoding = 'utf-8')
+        res = subprocess.run(cmd, check = False, shell = True, capture_output = True, encoding = 'utf-8')
         if res.returncode != 0:
             log.error(f"MC detection failed:\n{res.stdout}\n{res.stderr}")
             sys.exit(res.returncode)
         mc_detected = False
         if "O2berkeleytree" in res.stdout:
             mc_detected = True
-        if mc_detected != self.is_mc:
-            log.fatal(f"Config says is_MC: {self.is_mc} but input files say is_MC: {mc_detected}")
-            raise RuntimeError
-        log.info("MC/data origin are consistent.")
-        if self.is_mc:
-            log.info(f"Files will be converted as: MC")
-        else:
-            log.info(f"Files will be converted as: data")
+
+        origin_from_dir = "MC" if self.is_mc else "data"
+        if mc_detected == self.is_mc:
+            log.info("MC/data origin are consistent between directory search and AO2D contents.")
+            log.info(f"Files will be converted as: {origin_from_dir}")
+            return
+        origin_from_file = "MC" if mc_detected else "data"
+        log.critical("Origin via directory search does not match origin via AO2D file contents:")
+        log.critical(f"\tDirectory search: {origin_from_dir}")
+        log.critical(f"\tAO2D contents : {origin_from_file}")
+        sys.exit(1)
 
     def schedule(self):
         if self.is_test:
