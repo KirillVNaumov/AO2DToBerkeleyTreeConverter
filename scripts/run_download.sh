@@ -45,19 +45,5 @@ PYTHON_PACK="JAliEn-ROOT/0.7.22-2" # provides rich module and AliEn tools, and A
 
 check_cmd shifter
 
-# Check AliEn token
-"${SHIFTER[@]}" $ALIENV setenv $PYTHON_PACK -c \
-    alien-token-info 2>/dev/null
-ret=$?
-if [[ $ret -eq 0 ]]; then
-    info "Valid AliEn token found."
-elif [[ $ret -eq 2 ]]; then
-    error "No valid AliEn token found. Run \`source scripts/get_token.sh\` to refresh your token."
-    exit 2
-else
-    error "Unrecognized error $ret while checking AliEn token, crashing out."
-    exit $ret
-fi
-
 "${SHIFTER[@]}" $ALIENV setenv $PYTHON_PACK -c \
     python3 "$PROJECT_ROOT"/scripts/download_hyperloop.py -c "$config"

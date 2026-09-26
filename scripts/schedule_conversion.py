@@ -70,7 +70,7 @@ class Converter:
         if not self.is_mc:
             log.info(f"  Save clusters: {self.save_clusters}")
         elif self.is_mc and "save_clusters" in cfg["convert"]:
-            log.warning(f"  Cluster saving setting will be ignored in MC conversion!")
+            log.warning("  Cluster saving setting will be ignored in MC conversion!")
         log.info(f"  Number of AO2Ds per BerkeleyTree: {self.naod}")
         log.info(f"  ROOT package: {self.root_spec}")
         log.info(f"  Email: {self.email}")
@@ -122,9 +122,9 @@ class Converter:
               f"/cvmfs/alice.cern.ch/bin/alienv setenv {self.root_spec} -c "
               f"make remake -C {self.base_path}"
         )
-        res = subprocess.run(cmd, shell = True)#, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        res = subprocess.run(cmd, check = False, capture_output = True, shell = True)
         if res.returncode != 0:
-            log.error("Compilation failed!")
+            log.error(f"Compilation failed (exit code {res.returncode}): \n\t{res.stdout}\n\t{res.stderr}")
             sys.exit(res.returncode)
 
     def get_origin(self):
@@ -221,13 +221,17 @@ class Converter:
 
         if self.is_test:
             log.info("Starting test conversion.")
-            result = subprocess.run(f"/usr/bin/bash {self.output}/convert.sh", shell = True)
+            result = subprocess.run(f"/usr/bin/bash {self.output}/convert.sh", check=False, shell = True)
             if result.returncode != 0:
-                log.error("Test conversion crashed, exiting.")
+                log.error(f"Test conversion crashed, exiting:\n{result.stdout}\n{result.stderr}")
                 sys.exit(result.returncode)
             log.info("Test conversion succeeded.")
         else:
-            job_id = subprocess.run(["sbatch", "--parsable", f"{self.output}/convert.sh"], stdout = subprocess.PIPE, stderr = subprocess.PIPE, encoding = "utf-8").stdout.strip()
+            result = subprocess.run(["sbatch", "--parsable", f"{self.output}/convert.sh"], check=False, capture_output=True, encoding = "utf-8")
+            if result.returncode != 0:
+                log.error(f"Conversion batch submission failed:\n{result.stdout}\n{result.stderr}")
+                sys.exit(result.returncode)
+            job_id = result.stdout.strip()
             log.info(f"Submitted conversion batch job: ID {job_id}")
 
         with open(f"{self.base_path}/templates/treelist_nersc.tmpl", 'r') as f:
@@ -244,13 +248,17 @@ class Converter:
 
         if self.is_test:
             log.info("Creating treelist.")
-            result = subprocess.run(["/usr/bin/bash", f"{self.output}/treelist.sh"], encoding = "utf-8")
+            result = subprocess.run(["/usr/bin/bash", f"{self.output}/treelist.sh"], check=False, encoding = "utf-8")
             if result.returncode != 0:
-                log.error("Treelist creation crashed, exiting.")
+                log.error(f"Treelist creation crashed, exiting:\n{result.stdout}\n{result.stderr}")
                 sys.exit(result.returncode)
             log.info("Treelist creation succeeded.")
         else:
-            job_id = subprocess.run(["sbatch", "--parsable", f"--dependency=afterok:{job_id}", f"{self.output}/treelist.sh"], stdout = subprocess.PIPE, stderr = subprocess.PIPE, encoding = "utf-8").stdout.strip()
+            result = subprocess.run(["sbatch", "--parsable", f"--dependency=afterok:{job_id}", f"{self.output}/treelist.sh"], check=False, capture_output=True, encoding = "utf-8")
+            if result.returncode != 0:
+                log.error(f"Treelist batch submission failed:\n{result.stdout}\n{result.stderr}")
+                sys.exit(result.returncode)
+            job_id = result.stdout.strip()
             log.info(f"Submitted tree finder batch job: ID {job_id}")
 
 if __name__ == '__main__':

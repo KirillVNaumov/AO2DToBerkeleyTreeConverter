@@ -215,21 +215,22 @@ class HyperDownloader:
     def check_alien(self):
         log.info("Checking AliEn token...")
         # try to run alien_ls and see if it returns nonzero exit code
-        result = subprocess.run('alien-token-info', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run('alien-token-info', check=False, shell=True, capture_output=True)
         if result.returncode == 0:
             # valid token
             log.info("AliEn token validated.")
+            return
         elif result.returncode == 2:
             # no valid token
-            log.critical("No valid AliEn token found. Run `source get_token.sh` to refresh your token.")
-            sys.exit(2)
+            token_script_abs = Path(__file__).resolve().parent / "get_token.sh"
+            token_script_rel = os.path.relpath(token_script_abs, Path.cwd())
+            log.critical(f"No valid AliEn token found. Run `source {token_script_rel}` to refresh your token.")
         elif result.returncode == 127:
             # alien-token-info not found
-            log.critical("No valid alien-token-info command: are you in the right alienv?")
-            sys.exit(127)
+            log.critical("No valid alien-token-info command: are you running the run_download.sh script?")
         else:
             log.critical("Unrecognized error, crashing out.")
-            sys.exit(result.returncode)
+        sys.exit(result.returncode)
 
     def download(self):
         # Loop over list of Hyperloop directories and find all matching files inside
@@ -250,7 +251,6 @@ class HyperDownloader:
         if len(aod_paths) != len(set(aod_paths)):
             log.critical("Found duplicate AO2D paths?")
             seen = set()
-            duplicates = []
 
             for aod_path in aod_paths:
                 if aod_path in seen:
@@ -264,7 +264,7 @@ class HyperDownloader:
         # Set up GRID and local paths
         pairs = []
         for d in aod_paths:
-            hy_id = [x for x in d.split('/') if x.startswith('hy_')][0]
+            hy_id = next(x for x in d.split('/') if x.startswith('hy_'))
             sub_id = d.split('/')[-2]
             local_path = f"{self.output}/{hy_id}/{sub_id}/{d.split('/')[-1]}"
             pairs.append(FilePair(d, local_path, self.ntries, self.timeout))
@@ -380,14 +380,24 @@ class HyperDownloader:
     def get_aod_paths(self):
         aod_paths = []
         with Progress() as progress:
-            search_task = progress.add_task("[green]Searching for files...", total=len(self.hyperdirs),refresh_per_second=1)
+            search_task = progress.add_task("[green]Searching for files...", total=len(self.hyperdirs), refresh_per_second=1)
             for hydir in self.hyperdirs:
                 try:
                     # Use strip() to remove spurious newline at end of alien_find output
-                    aod_paths += subprocess.run(f'alien_find {hydir} {self.filename}', shell = True, encoding = 'utf-8',
-                                                stdout = subprocess.PIPE).stdout.strip().split('\n')
+                    hydir_paths = subprocess.run(f'alien_find {hydir} {self.filename}',
+                                                shell = True, encoding = 'utf-8',
+                                                capture_output=True, check=True).stdout.strip().split('\n')
                 except subprocess.CalledProcessError as e:
                     log.error(f"Failed to find {self.filename} in {hydir}: {e}")
+
+                if not hydir_paths[0]:
+                    # if no AO2Ds in the directory, then hydir_paths will be ['']
+                    # can happen if run is small and had only a few jobs that crashed
+                    # happens often with small datasets / runs
+                    log.warning(f"Found 0 files in Hyperloop directory: {hydir}")
+                else:
+                    log.debug(f"Found {len(hydir_paths)} files in Hyperloop directory: {hydir}")
+                    aod_paths += hydir_paths
                 progress.update(search_task, advance=1)
         self.write_paths_to_file(f"{self.output}/aod_paths.txt", aod_paths)
         log.info(f"Search complete. Found {len(aod_paths)} files.")
@@ -433,7 +443,7 @@ class HyperDownloader:
         ssh_url         = subprocess.check_output(['git', 'ls-remote', '--get-url', remote], encoding='ascii').strip()
         http_url        = f"https://github.com/{ssh_url.split(':', 1)[1]}"
         msg             = subprocess.check_output(['git', 'log', '-1', '--pretty=%B'], encoding='ascii').strip()
-        dt              = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        dt              = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # noqa: DTZ005
 
         o2physics_ver   = self.get_o2physics_version()
         dirlist         = '\n'.join([f"- {dirname}" for dirname in self.hyperdirs])
@@ -474,8 +484,8 @@ class HyperDownloader:
         try:
             train_prefix = f"{self.train // 10000:04d}" # cut off last four digits and left pad with zeroes
             search_path = f"/alice/cern.ch/user/a/alihyperloop/outputs/{train_prefix}/{self.train}"
-            cmd = subprocess.run(f'alien_find {search_path} {json_file}', shell = True, encoding = 'utf-8',
-                                    stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+            cmd = subprocess.run(f'alien_find {search_path} {json_file}', shell = True,
+                                    encoding = 'utf-8', capture_output=True, check=False)
             path = cmd.stdout.strip()
             if cmd.returncode == 0:
                 if not path:
