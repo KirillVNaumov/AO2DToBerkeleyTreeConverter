@@ -14,6 +14,7 @@ import argparse
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,6 +26,7 @@ from pathlib import Path
 import yaml
 from rich.logging import RichHandler
 from rich.progress import Progress
+from rich.prompt import Confirm
 
 log = logging.getLogger('downloader')
 log.setLevel(logging.DEBUG)
@@ -108,8 +110,17 @@ class HyperDownloader:
             fh = logging.FileHandler(f'{self.output}/retry.log', mode = 'w')
             log.info("Output directory already exists.")
         else:
-            log.critical("Mode could not be determined, crashing.")
-            sys.exit(10)
+            log.critical("Mode could not be determined; this state probably resulted from a crash.")
+            if Confirm.ask(f"[red]Would you like to wipe the output directory ({self.output}) and restart the download from scratch?[/red]",
+                           default=False, show_default=False, case_sensitive=False):
+                shutil.rmtree(self.output)
+                os.makedirs(self.output)
+                self.mode = Mode.DOWNLOAD
+                fh = logging.FileHandler(f'{self.output}/download.log', mode = 'w')
+                log.info(f"Output directory ({self.output}) wiped, starting download from scratch.")
+            else:
+                log.info(f"Download stopped, output directory ({self.output}) still present.")
+                sys.exit(10)
 
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
