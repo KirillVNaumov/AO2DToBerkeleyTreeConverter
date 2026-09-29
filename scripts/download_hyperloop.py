@@ -421,17 +421,6 @@ class HyperDownloader:
 
         return aod_paths
 
-    # def build_retry_filelist(self, failed):
-    #     with open(f"{self.output}/redownload.sh", 'w') as f:
-    #         f.write("#!/usr/bin/bash\n")
-    #         for pair in failed:
-    #             f.write(f'alien_cp -f -retry {self.ntries} -timeout {self.timeout} {pair.src} {pair.dst}\n')
-    #     log.info( "A script redownload.sh has been prepared. You can attempt another download of the remaining files by running:")
-    #     log.info(f"  shifter --module=cvmfs --image=tch285/o2alma:latest /cvmfs/alice.cern.ch/bin/alienv setenv xjalienfs/1.6.9-1 -c bash {self.output}/redownload.sh")
-    #     log.info( "Don't forget to recreate the filelist once more files have been downloaded!")
-    #     log.info( "You can do this with the command:")
-    #     log.info(f"  find {self.output} -type f -name */{self.filename} > {self.output}/filelist2.txt")
-
     def create_filelist(self):
         """Save filelist of all files with a matching filename."""
         filelist = f'{self.output}/filelist.txt'
