@@ -16,7 +16,7 @@ root_pack={{ROOT_PACK}}
 
 find $output \
     -type f -name $tree_name \
-    > $tree_list
+    | sort -V > $tree_list
 
 tstruct=$output/tstruct.yaml
 

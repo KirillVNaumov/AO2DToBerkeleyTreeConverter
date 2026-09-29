@@ -410,6 +410,8 @@ class HyperDownloader:
                     log.debug(f"Found {len(hydir_paths)} files in Hyperloop directory: {hydir}")
                     aod_paths += hydir_paths
                 progress.update(search_task, advance=1)
+
+        aod_paths.sort()
         self.write_paths_to_file(f"{self.output}/aod_paths.txt", aod_paths)
         log.info(f"Search complete. Found {len(aod_paths)} files.")
 
@@ -430,11 +432,10 @@ class HyperDownloader:
         """Save filelist of all files with a matching filename."""
         filelist = f'{self.output}/filelist.txt'
         pattern = f"{self.output}/**/{self.filename}"
-        nfiles = 0
-        with open(filelist, 'w') as f:
-            for path in iglob(pattern, recursive = True):
-                print(path, file = f)
-                nfiles += 1
+        paths = [path for path in iglob(pattern, recursive = True)]
+        paths.sort()
+        nfiles = len(paths)
+        self.write_paths_to_file(filelist, paths)
 
         log.info(f"Created filelist: {filelist}")
         return filelist, nfiles
