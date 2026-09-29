@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import glob
 import logging
 import os
 import shutil
@@ -179,25 +180,60 @@ class Converter:
         log.critical(f"\tAO2D contents : {origin_from_file}")
         sys.exit(1)
 
+    def setup_input_filelists(self):
+        log.info("Setting up input filelists...")
+
+        file_pattern = f"{self.slurm_output}/input_*.txt"
+        for file_path in glob.glob(file_pattern):
+            try:
+                os.remove(file_path)
+                log.debug(f"Deleted: {file_path}")
+            except OSError as e:
+                log.debug(f"Error deleting {file_path}: {e}")
+
+        # each Hyperloop directory corresponds to one run
+        hydirs = [str(d) for d in Path(self.input).parent.iterdir() if d.is_dir()]
+        paths_mapping = {hydir: [] for hydir in hydirs}
+        with open(self.input, 'r') as f:
+            filepaths = [filepath.rstrip() for filepath in f]
+        for filepath in filepaths:
+            hydir_match = ""
+            for hydir in hydirs:
+                if hydir in filepath:
+                    if not hydir_match:
+                        hydir_match = hydir
+                        paths_mapping[hydir].append(filepath)
+                    else:
+                        log.critical(f"Somehow two Hyperloop directories ({hydir_match} and {hydir}) matched this file: {filepath}")
+                        sys.exit(1)
+            if not hydir_match:
+                log.critical(f"Did not find any match between file: {filepath} and Hyperloop directories: {hydirs}")
+                sys.exit(1)
+
+        ijob = 0
+        for hydir, paths in paths_mapping.items():
+            paths.sort() # so it's deterministic
+            chunks = [paths[i:i + self.naod] for i in range(0, len(paths), self.naod)]
+            for chunk in chunks:
+                ijob += 1
+                with open(f"{self.slurm_output}/input_{ijob}.txt", "w") as f:
+                    f.writelines(f"{path}\n" for path in chunk)
+
+        # ijob now equals the total number of jobs
+        return ijob
+
     def schedule(self):
         if self.is_test:
             log.info("Running in local testing mode.")
         else:
             log.info("Running in production mode.")
 
-        with open(self.input, 'r') as f:
-            tot_nfiles = sum(1 for line in f)
-        njobs = (tot_nfiles + self.naod - 1) // self.naod
+        notify_opts = f"#SBATCH --mail-type=BEGIN,END\n#SBATCH --mail-user={self.email}" if self.email else ""
+        cluster_opt = "--save-clusters" if self.save_clusters else ""
+        verbosity = f"-{'v' * self.verbosity}" if self.verbosity else ""
+        mc_opt = "--is-mc" if self.is_mc else ""
 
-        notify = f"#SBATCH --mail-type=BEGIN,END\n#SBATCH --mail-user={self.email}" if self.email else ""
-        cluster = "--save-clusters" if self.save_clusters else ""
-
-        verbosity = ""
-        if self.verbosity:
-            verbosity = f"-{'v' * self.verbosity}"
-        mc_opt = ""
-        if self.is_mc:
-            mc_opt = "--is-mc"
+        njobs = self.setup_input_filelists()
 
         with open(f"{self.base_path}/templates/convert_nersc.tmpl", 'r') as f:
             contents = f.read()
@@ -205,12 +241,10 @@ class Converter:
         contents = contents.replace("{{NJOBS}}", str(njobs))
         contents = contents.replace("{{SLURM_OUT}}", self.slurm_output)
         contents = contents.replace("{{OUTPUT}}", self.output)
-        contents = contents.replace("{{NOTIFY_OPTS}}", notify)
+        contents = contents.replace("{{NOTIFY_OPTS}}", notify_opts)
         contents = contents.replace("{{CONFIG}}", self.config_file)
-        contents = contents.replace("{{INPUT_FILELIST}}", self.input)
-        contents = contents.replace("{{NFILES_PER_TREE}}", str(self.naod))
         contents = contents.replace("{{TREE_NAME}}", self.tree_name)
-        contents = contents.replace("{{CLUSTER_OPT}}", cluster)
+        contents = contents.replace("{{CLUSTER_OPT}}", cluster_opt)
         contents = contents.replace("{{CONVERTER_PATH}}", str(self.converter))
         contents = contents.replace("{{VERBOSITY}}", verbosity)
         contents = contents.replace("{{MC_OPT}}", mc_opt)
@@ -241,7 +275,7 @@ class Converter:
         contents = contents.replace("{{SLURM_OUT}}", self.slurm_output)
         contents = contents.replace("{{TREE_NAME}}", self.tree_name)
         contents = contents.replace("{{ROOT_PACK}}", self.root_spec)
-        contents = contents.replace("{{NOTIFY_OPTS}}", notify)
+        contents = contents.replace("{{NOTIFY_OPTS}}", notify_opts)
 
         with open(f"{self.output}/treelist.sh", 'w') as f:
             f.write(contents)

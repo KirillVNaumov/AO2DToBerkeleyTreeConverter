@@ -21,38 +21,14 @@ else
 fi
 shifter_cmd="shifter --image=tch285/o2alma:latest"
 
-FILELIST={{INPUT_FILELIST}}
-NFILES=$(sed -n '$=' < $FILELIST)
-NJOBS={{NJOBS}}
-NFILES_PER_TREE={{NFILES_PER_TREE}}
-echo "Total number of AO2Ds to convert: ${NFILES}"
-echo "Total number of jobs/trees: $NJOBS"
-echo "Number of AO2Ds per converted tree: $NFILES_PER_TREE"
-
-stop=$(( SLURM_ARRAY_TASK_ID * NFILES_PER_TREE ))
-start=$(( stop - $(( NFILES_PER_TREE - 1 )) ))
-
-if (( stop > NFILES ))
-then
-  stop=$NFILES
-fi
-
-echo "Start=$start"
-echo "Stop=$stop"
-echo "Files to be converted:"
 input_txt={{SLURM_OUT}}/input_$SLURM_ARRAY_TASK_ID.txt
+
+echo "Input filelist: $input_txt"
+echo "Files to be converted:"
+sed 's/^/\t/' $input_txt
+
 mkdir -p "{{OUTPUT}}/$SLURM_ARRAY_TASK_ID/"
 output_file={{OUTPUT}}/$SLURM_ARRAY_TASK_ID/{{TREE_NAME}}
-
-# remove input txt if it exists
-rm -f $input_txt
-
-for (( file_idx = start; file_idx <= stop; file_idx++ )); do
-  input_file=$(sed -n "${file_idx}p" $FILELIST)
-  echo "  $input_file"
-  echo "$input_file" >> "$input_txt"
-done
-
 
 cmd="$shifter_cmd --module=cvmfs \
     /cvmfs/alice.cern.ch/bin/alienv setenv {{ROOT_PACK}} -c \
