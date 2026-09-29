@@ -17,24 +17,34 @@ log.setLevel(logging.DEBUG)
 log.addHandler(RichHandler(level = logging.INFO, log_time_format = "[%X]"))
 
 class Converter:
-    _defaults = {
-        "test": True,
-        "tree_name": "BerkeleyTree.root",
-        "save_clusters": False,
-        "naod": 10,
-        "root_spec": "ROOT/v6-36-04-alice2-2",
-        "email": None,
-        "recompile": False,
-        "verbosity": 1,
-    }
-
     def __init__(self, config_file):
-        self.configure(config_file)
-
-    def configure(self, config_file):
-        self.base_path = Path(__file__).resolve().parent.parent
         cfg = self.get_cfg(config_file)
+        self.validate_cfg(cfg)
+        self.configure(cfg)
+
+    def configure(self, cfg):
+        defaults = {
+            "test": True,
+            "tree_name": "BerkeleyTree.root",
+            "save_clusters": False,
+            "naod": 10,
+            "root_spec": "ROOT/v6-36-04-alice2-2",
+            "email": None,
+            "recompile": False,
+            "verbosity": 1,
+        }
         self.dataset = cfg["dataset"]
+        convert_cfg = cfg.get("convert", {})
+        self.is_test = convert_cfg.get("test", defaults["test"])
+        self.tree_name = convert_cfg.get("tree_name", defaults["tree_name"])
+        self.save_clusters = convert_cfg.get("save_clusters", defaults["save_clusters"])
+        self.naod = convert_cfg.get("naod", defaults["naod"])
+        self.root_spec = convert_cfg.get("root_spec", defaults["root_spec"])
+        self.email = convert_cfg.get("email", defaults["email"])
+        self.recompile = convert_cfg.get("recompile", defaults["recompile"])
+        self.verbosity = convert_cfg.get("verbosity", defaults["verbosity"])
+
+        self.base_path = Path(__file__).resolve().parent.parent
         self.is_mc = self.get_origin()
         subdir = "mc_central" if self.is_mc else "data"
         self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D/filelist.txt"
@@ -48,20 +58,12 @@ class Converter:
         fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S'))
         log.addHandler(fh)
 
-        log.info(f"Reading Converter configuration from: {self.config_file}")
-
-        self.is_test = cfg["convert"].get("test", self._defaults["test"])
-        self.tree_name = cfg["convert"].get("tree_name", self._defaults["tree_name"])
-        self.save_clusters = cfg["convert"].get("save_clusters", self._defaults["save_clusters"])
-        self.naod = cfg["convert"].get("naod", self._defaults["naod"])
-        self.root_spec = cfg["convert"].get("root_spec", self._defaults["root_spec"])
-        self.email = cfg["convert"].get("email", self._defaults["email"])
-        self.recompile = cfg["convert"].get("recompile", self._defaults["recompile"])
-        self.verbosity = cfg["convert"].get("verbosity", self._defaults["verbosity"])
+        log.info( "Starting HyperConverter...")
+        log.info(f"Reading HyperConverter configuration from: {self.config_file}")
 
         self.converter = self.base_path / "bin" / "converter"
 
-        log.info( "Converter configuration:")
+        log.info( "HyperConverter configuration:")
         log.info(f"  Converter executable: {self.converter}")
         log.info(f"  AO2D filelist: {self.input}")
         log.info(f"  Output directory: {self.output}")
@@ -117,6 +119,20 @@ class Converter:
         with open(self.config_file) as stream:
             cfg = yaml.safe_load(stream)
         return cfg
+
+    def validate_cfg(self, cfg):
+        if "dataset" not in cfg:
+            log.critical("Must define a 'dataset' in the config file!")
+            sys.exit(1)
+        if "download" not in cfg:
+            log.critical("Must define a 'download' section in the config file!")
+            sys.exit(1)
+        if "hyperdirs" not in cfg["download"]:
+            log.critical("Must give the Hyperloop directories in the 'hyperdirs' field in the config file!")
+            sys.exit(1)
+        if "train" not in cfg["download"]:
+            log.critical("Must give the train number in the 'train' field in the config file!")
+            sys.exit(1)
 
     def compile_converter(self):
         cmd = ("shifter --module=cvmfs --image=tch285/o2alma:latest "

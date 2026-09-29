@@ -71,22 +71,26 @@ class FailedDownloadError(subprocess.CalledProcessError):
         self.dst = dst
 
 class HyperDownloader:
-    _defaults = {
-        "filename": "AO2D.root",
-        "nthreads": 40,
-        "ntries": 5,
-        "timeout": 150
-    }
     def __init__(self, config_file):
         self.check_alien()
-
-        self.configure(config_file)
-
-    def configure(self, config_file):
         cfg = self.get_cfg(config_file)
+        self.validate_cfg(cfg)
+        self.configure(cfg)
+
+    def configure(self, cfg):
+        defaults = {
+            "filename": "AO2D.root",
+            "nthreads": 40,
+            "ntries": 5,
+            "timeout": 150
+        }
         self.dataset = cfg["dataset"]
         self.hyperdirs = cfg["download"]["hyperdirs"].split(",")
-        self.filename = cfg["download"].get("filename", self._defaults["filename"])
+        self.train = cfg["download"]["train"]
+        self.filename = cfg["download"].get("filename", defaults["filename"])
+        self.nthreads = cfg["download"].get("nthreads", defaults["nthreads"])
+        self.ntries = cfg["download"].get("ntries", defaults["ntries"])
+        self.timeout = cfg["download"].get("timeout", defaults["timeout"])
         self.is_mc = self.get_origin()
 
         subdir = "mc_central" if self.is_mc else "data"
@@ -129,11 +133,6 @@ class HyperDownloader:
         log.info( "Starting HyperDownloader...")
         log.info(f"Reading HyperDownloader configuration from: {self.config_file}")
 
-        self.train = cfg["download"]["train"]
-        self.nthreads = cfg["download"].get("nthreads", self._defaults["nthreads"])
-        self.ntries = cfg["download"].get("ntries", self._defaults["ntries"])
-        self.timeout = cfg["download"].get("timeout", self._defaults["timeout"])
-
         log.info( "HyperDownloader configuration:")
         log.info(f"  Mode: {self.mode.name}")
         log.info(f"  Dataset: {self.dataset}")
@@ -163,6 +162,11 @@ class HyperDownloader:
         with open(self.config_file) as stream:
             cfg = yaml.safe_load(stream)
         return cfg
+
+    def validate_cfg(self, cfg):
+        if "dataset" not in cfg:
+            log.critical("Must define a dataset in the config file!")
+            sys.exit(1)
 
     def get_origin(self):
         log.info("Inspecting AO2Ds to determine data/MC origin...")
