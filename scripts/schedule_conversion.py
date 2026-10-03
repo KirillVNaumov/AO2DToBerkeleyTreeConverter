@@ -44,7 +44,6 @@ class Converter:
         self.recompile = convert_cfg.get("recompile", defaults["recompile"])
         self.verbosity = convert_cfg.get("verbosity", defaults["verbosity"])
 
-        self.base_path = Path(__file__).resolve().parent.parent
         self.is_mc = self.get_origin()
         subdir = "mc_central" if self.is_mc else "data"
         self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D/filelist.txt"
@@ -106,6 +105,7 @@ class Converter:
     def get_cfg(self, config_file):
         if not config_file.endswith(".yaml"):
             config_file = f"{config_file}.yaml"
+        self.base_path = Path(__file__).resolve().parent.parent
 
         if config_file.startswith("/"):
             self.config_file = config_file
