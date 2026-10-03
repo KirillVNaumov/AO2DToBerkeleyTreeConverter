@@ -184,6 +184,9 @@ class Converter:
         mc_detected = False
         if "O2berkeleytree" in res.stdout:
             mc_detected = True
+        else:
+            # check TTrees if data
+            self.check_trees(res.stdout)
 
         origin_from_dir = "MC" if self.is_mc else "data"
         if mc_detected == self.is_mc:
@@ -195,6 +198,25 @@ class Converter:
         log.critical(f"\tDirectory search: {origin_from_dir}")
         log.critical(f"\tAO2D contents : {origin_from_file}")
         sys.exit(1)
+
+    def check_trees(self, output):
+        required_trees = ['O2jbc', 'O2jcollision', 'O2jtrack']
+        log.info(f"Checking for required TTrees: {", ".join(required_trees)}")
+        missing_trees = [tree for tree in required_trees if tree not in output]
+        if missing_trees:
+            log.critical(f"AO2D does not contain the right TTrees; missing: {missing_trees}")
+            sys.exit(1)
+        else:
+            log.info("Required TTrees verified.")
+        if self.save_clusters:
+            required_trees_clusters = ['O2jcluster', 'O2jclustertrack', 'O2jemctrack', "O2jemccollisionlb"]
+            log.info(f"Cluster info requested, so checking for additional TTrees: {", ".join(required_trees_clusters)}")
+            missing_trees_clusters = [tree for tree in required_trees_clusters if tree not in output]
+            if missing_trees_clusters:
+                log.critical(f"AO2D does not contain the right TTrees; missing: {missing_trees_clusters}")
+                sys.exit(1)
+            else:
+                log.info("Required TTrees for cluster info verified.")
 
     def setup_input_filelists(self):
         log.info("Setting up input filelists...")
