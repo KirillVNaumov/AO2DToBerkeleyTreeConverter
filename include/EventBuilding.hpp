@@ -19,6 +19,8 @@ Float_t   fBuffer_vtxZ;
 UShort_t  fBuffer_eventSel;
 ULong64_t fBuffer_triggerSel;
 UInt_t    fBuffer_rct;
+Bool_t    fBuffer_isEmcalAmbiguous;
+Bool_t    fBuffer_isEmcalReadout;
 
 // track
 std::vector<Float_t> *fBuffer_track_pt;
@@ -159,6 +161,8 @@ struct Collision {
   UShort_t eventSel;
   ULong64_t triggerSel;
   UInt_t rct;
+  Bool_t isEmcalAmbiguous;
+  Bool_t isEmcalReadout;
 
   void build(TTree *tree) {
     // fill collision
@@ -172,6 +176,13 @@ struct Collision {
     GetLeafValue(tree, "fTriggerSel", triggerSel);
     GetLeafValue(tree, "fRct", rct);
   }
+
+  void buildWithEmcalInfo(TTree *collisionTree, TTree *emcLabelsTree) {
+    // fill collision
+    build(collisionTree);
+    GetLeafValue(emcLabelsTree, "fIsAmbiguous", isEmcalAmbiguous);
+    GetLeafValue(emcLabelsTree, "fIsEMCALReadout", isEmcalReadout);
+  }
 };
 
 // event class containing collision and vector of tracks and clusters
@@ -184,7 +195,8 @@ public:
 
 std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                                TTree *clusters, TTreeReader *clustertracks,
-                               TTreeReader *emctracks, bool saveClusters) {
+                               TTreeReader *emctracks, TTree *emccollisionlb,
+                               bool saveClusters) {
 
   std::vector<Event> events;
   logDebug("-> Looping over ", collisions->GetEntries(), " collisions");
@@ -241,13 +253,15 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // loop over collisions
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
     collisions->GetEntry(idxCol);
+    if (saveClusters) emccollisionlb->GetEntry(idxCol);
     Event ev;
     int idxBC;
     GetLeafValue(collisions, "fIndexJBCs", idxBC);
     bc->GetEntry(idxBC);
     GetLeafValue(bc, "fRunNumber", ev.col.runNumber);
     // build collision info
-    ev.col.build(collisions);
+    if (saveClusters) ev.col.buildWithEmcalInfo(collisions, emccollisionlb);
+    else ev.col.build(collisions);
 
     // loop through global indices of tracks (idxTrack) for this collision
     for(const int& idxTrack : trackMap[idxCol]) {
