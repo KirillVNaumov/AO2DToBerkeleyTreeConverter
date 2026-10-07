@@ -33,7 +33,7 @@ output_file={{OUTPUT}}/$SLURM_ARRAY_TASK_ID/{{TREE_NAME}}
 cmd="$shifter_cmd --module=cvmfs \
     /cvmfs/alice.cern.ch/bin/alienv setenv {{ROOT_PACK}} -c \
     {{CONVERTER_PATH}} \
-      -i $input_txt -o $output_file -c $config_file {{CLUSTER_OPT}} {{MC_OPT}} {{VERBOSITY}}"
+      -i $input_txt -o $output_file -c $config_file {{CONVERSION_OPTS}}"
 echo "Conversion command: $cmd"
 $cmd
 ecode=$?

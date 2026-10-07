@@ -48,7 +48,8 @@ class Converter:
         subdir = "mc_central" if self.is_mc else "data"
         self.input = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/AO2D/filelist.txt"
         self.output = f"/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/run3/{subdir}/{self.dataset}/BerkeleyTrees"
-        self.detect_mc()
+        self.check_origin()
+        self.is_upc = self.check_if_upc()
 
         os.makedirs(self.output, exist_ok = True)
         shutil.copy2(self.config_file, self.output)
@@ -69,6 +70,7 @@ class Converter:
         log.info(f"  Tree name: {self.tree_name}")
         log.info(f"  Test mode: {self.is_test}")
         log.info(f"  Is MC: {self.is_mc}")
+        log.info(f"  Is UPC: {self.is_upc}")
         if not self.is_mc:
             log.info(f"  Save clusters: {self.save_clusters}")
         elif self.is_mc and "save_clusters" in cfg["convert"]:
@@ -139,7 +141,7 @@ class Converter:
               f"/cvmfs/alice.cern.ch/bin/alienv setenv {self.root_spec} -c "
               f"make remake -C {self.base_path}"
         )
-        res = subprocess.run(cmd, check = False, capture_output = True, shell = True)
+        res = subprocess.run(cmd, check = False, capture_output = True, shell = True, encoding="utf-8")
         if res.returncode != 0:
             log.error(f"Compilation failed (exit code {res.returncode}): \n\t{res.stdout}\n\t{res.stderr}")
             sys.exit(res.returncode)
@@ -170,7 +172,7 @@ class Converter:
 
         return is_mc
 
-    def detect_mc(self):
+    def check_origin(self):
         log.info("Cross-checking data/MC origin against AO2D contents...")
         with open(self.input, 'r') as f:
             path = f.readline().strip() 
@@ -182,11 +184,12 @@ class Converter:
             log.error(f"MC detection failed:\n{res.stdout}\n{res.stderr}")
             sys.exit(res.returncode)
         mc_detected = False
-        if "O2berkeleytree" in res.stdout:
+        self.trees_output = res.stdout
+        if "O2berkeleytree" in self.trees_output:
             mc_detected = True
         else:
             # check TTrees if data
-            self.check_trees(res.stdout)
+            self.check_required_trees()
 
         origin_from_dir = "MC" if self.is_mc else "data"
         if mc_detected == self.is_mc:
@@ -199,10 +202,10 @@ class Converter:
         log.critical(f"\tAO2D contents : {origin_from_file}")
         sys.exit(1)
 
-    def check_trees(self, output):
+    def check_required_trees(self):
         required_trees = ['O2jbc', 'O2jcollision', 'O2jtrack']
         log.info(f"Checking for required TTrees: {", ".join(required_trees)}")
-        missing_trees = [tree for tree in required_trees if tree not in output]
+        missing_trees = self.check_for_trees(required_trees)
         if missing_trees:
             log.critical(f"AO2D does not contain the right TTrees; missing: {missing_trees}")
             sys.exit(1)
@@ -211,12 +214,31 @@ class Converter:
         if self.save_clusters:
             required_trees_clusters = ['O2jcluster', 'O2jclustertrack', 'O2jemctrack', "O2jemccollisionlb"]
             log.info(f"Cluster info requested, so checking for additional TTrees: {", ".join(required_trees_clusters)}")
-            missing_trees_clusters = [tree for tree in required_trees_clusters if tree not in output]
+            missing_trees_clusters = self.check_for_trees(required_trees_clusters)
             if missing_trees_clusters:
                 log.critical(f"AO2D does not contain the right TTrees; missing: {missing_trees_clusters}")
                 sys.exit(1)
             else:
                 log.info("Required TTrees for cluster info verified.")
+
+    def check_if_upc(self):
+        if self.is_mc:
+            log.info("Dataset is MC, will not convert UPC info.")
+            return False
+
+        upc_trees = ['O2jcollisionupc']
+        log.info(f"Checking for UPC tables: {", ".join(upc_trees)}")
+        missing_trees = self.check_for_trees(upc_trees)
+        if missing_trees:
+            log.debug(f"AO2D is missing these UPC tables: {missing_trees}")
+            log.info("UPC Tables missing, will not convert UPC info.")
+            return False
+        else:
+            log.info("UPC Tables present, will convert UPC info.")
+            return True
+
+    def check_for_trees(self, trees):
+        return [tree for tree in trees if tree not in self.trees_output]
 
     def setup_input_filelists(self):
         log.info("Setting up input filelists...")
@@ -267,9 +289,11 @@ class Converter:
             log.info("Running in production mode.")
 
         notify_opts = f"#SBATCH --mail-type=BEGIN,END\n#SBATCH --mail-user={self.email}" if self.email else ""
-        cluster_opt = "--save-clusters" if self.save_clusters else ""
-        verbosity = f"-{'v' * self.verbosity}" if self.verbosity else ""
-        mc_opt = "--is-mc" if self.is_mc else ""
+        conversion_opts = ""
+        if self.verbosity:     conversion_opts +=f" -{'v' * self.verbosity} "
+        if self.save_clusters: conversion_opts += " --save-clusters "
+        if self.is_mc:         conversion_opts += " --is-mc "
+        if self.is_upc:        conversion_opts += " --is-upc "
 
         njobs = self.setup_input_filelists()
 
@@ -282,10 +306,8 @@ class Converter:
         contents = contents.replace("{{NOTIFY_OPTS}}", notify_opts)
         contents = contents.replace("{{CONFIG}}", self.config_file)
         contents = contents.replace("{{TREE_NAME}}", self.tree_name)
-        contents = contents.replace("{{CLUSTER_OPT}}", cluster_opt)
+        contents = contents.replace("{{CONVERSION_OPTS}}", conversion_opts)
         contents = contents.replace("{{CONVERTER_PATH}}", str(self.converter))
-        contents = contents.replace("{{VERBOSITY}}", verbosity)
-        contents = contents.replace("{{MC_OPT}}", mc_opt)
         contents = contents.replace("{{ROOT_PACK}}", self.root_spec)
 
         with open(f"{self.output}/convert.sh", 'w') as f:

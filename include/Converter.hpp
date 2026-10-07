@@ -9,6 +9,7 @@
 #include <TLeaf.h>
 #include <TList.h>
 #include <TTree.h>
+#include <logger.hpp>
 
 #include <yaml-cpp/yaml.h>
 
@@ -86,6 +87,7 @@ class Converter {
   bool createHistograms;
   bool saveClusters;
   bool isMC;
+  bool isUPC;
 
 public:
   int processFiles(std::vector<TString> filelist);
@@ -93,10 +95,14 @@ public:
   void processFileData(TFile *file);
   int processFilesMC(const std::vector<TString>& filelist, const int numGoodFiles, bool fastClone);
 
-  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters, bool isMC)
-      : outputFilename(outputFilename), createHistograms(createHistograms), saveClusters(saveClusters), isMC(isMC) {
+  Converter(TString outputFilename, TString configFile, bool createHistograms, bool saveClusters, bool isMC, bool isUPC)
+      : outputFilename(outputFilename), createHistograms(createHistograms), saveClusters(saveClusters), isMC(isMC), isUPC(isUPC) {
 
     treecuts = YAML::LoadFile(configFile.Data());
+    if (isMC && isUPC) {
+      logWarning("Requested UPC conversion so setting isMC to false");
+      isMC = false;
+    }
     if (!isMC) readConfig();
   }
 };

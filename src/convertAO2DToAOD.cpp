@@ -10,7 +10,8 @@ int convertAO2DtoAOD(TString inputFilelist = "",
                       TString configFile = "treeCuts.yaml",
                       bool createHistograms = false,
                       bool saveClusters = false,
-                      bool isMC = false
+                      bool isMC = false,
+                      bool isUPC = false
                     ) {
 
   // loop over all files in txt file filelist
@@ -20,7 +21,7 @@ int convertAO2DtoAOD(TString inputFilelist = "",
   while (std::getline(file, str)) {
     filelist.push_back(str);
   }
-  Converter c(outputFilename.Data(), configFile.Data(), createHistograms, saveClusters, isMC);
+  Converter c(outputFilename.Data(), configFile.Data(), createHistograms, saveClusters, isMC, isUPC);
   return c.processFiles(filelist);
 }
 
@@ -35,7 +36,8 @@ int main(int argc, char **argv) {
         /*configFile = */ parser.configFile,
         /*createHistograms = */ parser.createHistograms,
         /*saveClusters = */ parser.saveClusters,
-        /*isMC = */ parser.isMC);
+        /*isMC = */ parser.isMC,
+        /*isUPC = */ parser.isUPC);
     // std::cout << "Code is " << end<< std::endl;
     // return end;
   } catch (int code) {

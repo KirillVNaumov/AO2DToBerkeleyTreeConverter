@@ -49,6 +49,17 @@ void Converter::createTree() {
     outputTree->Branch("isEmcalAmbiguous", &fBuffer_isEmcalAmbiguous);
     outputTree->Branch("isEmcalReadout", &fBuffer_isEmcalReadout);
   }
+  if (isUPC) {
+    outputTree->Branch("ampl_FV0", &fBuffer_amplitudesFV0);
+    outputTree->Branch("ampl_FT0A", &fBuffer_amplitudesFT0A);
+    outputTree->Branch("ampl_FT0C", &fBuffer_amplitudesFT0C);
+    outputTree->Branch("ampl_FDDA", &fBuffer_amplitudesFDDA);
+    outputTree->Branch("ampl_FDDC", &fBuffer_amplitudesFDDC);
+    outputTree->Branch("energy_common_ZNA", &fBuffer_energyCommonZNA);
+    outputTree->Branch("energy_common_ZNC", &fBuffer_energyCommonZNC);
+    outputTree->Branch("time_ZNA", &fBuffer_timeZNA);
+    outputTree->Branch("time_ZNC", &fBuffer_timeZNC);
+  }
 
   // track
   outputTree->Branch("track_pt", &fBuffer_track_pt);
@@ -84,6 +95,14 @@ void Converter::clearBuffers() {
   fBuffer_track_phi->clear();
   fBuffer_track_pt->clear();
   fBuffer_track_sel->clear();
+
+  if (isUPC) {
+    fBuffer_amplitudesFV0->clear();
+    fBuffer_amplitudesFT0A->clear();
+    fBuffer_amplitudesFT0C->clear();
+    fBuffer_amplitudesFDDA->clear();
+    fBuffer_amplitudesFDDC->clear();
+  }
 
   if (saveClusters) {
     fBuffer_cluster_energy->clear();
@@ -139,6 +158,18 @@ void Converter::writeEvents(TTree *tree, std::vector<Event> &events) {
     if (saveClusters) {
       fBuffer_isEmcalAmbiguous = (Bool_t)ev.col.isEmcalAmbiguous;
       fBuffer_isEmcalReadout = (Bool_t)ev.col.isEmcalReadout;
+    }
+    if (isUPC) {
+      fBuffer_energyCommonZNA = ev.col.energyCommonZNA;
+      fBuffer_energyCommonZNC = ev.col.energyCommonZNC;
+      fBuffer_timeZNA = ev.col.timeZNA;
+      fBuffer_timeZNC = ev.col.timeZNC;
+      // logInfo(fBuffer_energyCommonZNA);
+      fBuffer_amplitudesFV0 ->insert(fBuffer_amplitudesFV0->end(),  ev.col.amplitudesFV0.begin(),  ev.col.amplitudesFV0.end() );
+      fBuffer_amplitudesFT0A->insert(fBuffer_amplitudesFT0A->end(), ev.col.amplitudesFT0A.begin(), ev.col.amplitudesFT0A.end());
+      fBuffer_amplitudesFT0C->insert(fBuffer_amplitudesFT0C->end(), ev.col.amplitudesFT0C.begin(), ev.col.amplitudesFT0C.end());
+      fBuffer_amplitudesFDDA->insert(fBuffer_amplitudesFDDA->end(), ev.col.amplitudesFDDA.begin(), ev.col.amplitudesFDDA.end());
+      fBuffer_amplitudesFDDC->insert(fBuffer_amplitudesFDDC->end(), ev.col.amplitudesFDDC.begin(), ev.col.amplitudesFDDC.end());
     }
 
     // fill track properties
@@ -280,6 +311,7 @@ void Converter::processFileData(TFile *file) {
 
     std::unique_ptr<TTreeReader> O2jclustertrack = nullptr;
     std::unique_ptr<TTreeReader> O2jemctrack = nullptr;
+    std::unique_ptr<TTreeReader> O2jcollisionupc = nullptr;
     TTree *O2jcluster = nullptr, *O2jemccollisionlb = nullptr;
 
     if (saveClusters) {
@@ -292,6 +324,10 @@ void Converter::processFileData(TFile *file) {
       O2jemctrack = std::make_unique<TTreeReader>("O2jemctrack", dir.get());
       if (O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
     }
+    if (isUPC) {
+      O2jcollisionupc = std::make_unique<TTreeReader>("O2jcollisionupc", dir.get());
+      if (O2jcollisionupc->IsInvalid()) throw std::runtime_error("TTree O2jcollisionupc could not be found in file.");
+    }
 
     TTree *O2jcollision = (TTree *)dir->Get("O2jcollision");
     if (!O2jcollision) throw std::runtime_error("TTree O2jcollision could not be found in file.");
@@ -302,7 +338,7 @@ void Converter::processFileData(TFile *file) {
 
     // build event
     events =
-        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack.get(), O2jemctrack.get(), O2jemccollisionlb, saveClusters);
+        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack.get(), O2jemctrack.get(), O2jemccollisionlb, O2jcollisionupc.get(), saveClusters, isUPC);
 
     logDebug("Event size: ", events.size());
     totalNumberOfEvents += events.size();

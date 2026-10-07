@@ -21,6 +21,15 @@ ULong64_t fBuffer_triggerSel;
 UInt_t    fBuffer_rct;
 Bool_t    fBuffer_isEmcalAmbiguous;
 Bool_t    fBuffer_isEmcalReadout;
+std::vector<Float_t> *fBuffer_amplitudesFV0;
+std::vector<Float_t> *fBuffer_amplitudesFT0A;
+std::vector<Float_t> *fBuffer_amplitudesFT0C;
+std::vector<Float_t> *fBuffer_amplitudesFDDA;
+std::vector<Float_t> *fBuffer_amplitudesFDDC;
+Float_t   fBuffer_energyCommonZNA;
+Float_t   fBuffer_energyCommonZNC;
+Float_t   fBuffer_timeZNA;
+Float_t   fBuffer_timeZNC;
 
 // track
 std::vector<Float_t> *fBuffer_track_pt;
@@ -53,6 +62,16 @@ void GetLeafValue (TTree *tree, const char* name, T& container) {
   if (!branch) throw std::runtime_error("Branch '" + std::string(name) + "' in TTree " + tree->GetName() + " not found");
   TLeaf *leaf = branch->GetLeaf(name);
   if (!leaf) throw std::runtime_error("Leaf '" + std::string(name) + "' in branch " + branch->GetName() + " not found");
+  container = leaf->GetValue();
+}
+template<class T>
+void GetLeafValueReader (TTreeReader *treeReader, const char* name, T& container) {
+  TTree* tree = treeReader->GetTree();
+  TBranch *branch = tree->GetBranch(name);
+  if (!branch) throw std::runtime_error("Branch '" + std::string(name) + "' in TTree " + tree->GetName() + " not found");
+  TLeaf *leaf = branch->GetLeaf(name);
+  if (!leaf) throw std::runtime_error("Leaf '" + std::string(name) + "' in branch " + branch->GetName() + " not found");
+  branch->GetEntry(treeReader->GetCurrentEntry());
   container = leaf->GetValue();
 }
 
@@ -163,6 +182,15 @@ struct Collision {
   UInt_t rct;
   Bool_t isEmcalAmbiguous;
   Bool_t isEmcalReadout;
+  std::vector<Float_t> amplitudesFV0;
+  std::vector<Float_t> amplitudesFT0A;
+  std::vector<Float_t> amplitudesFT0C;
+  std::vector<Float_t> amplitudesFDDA;
+  std::vector<Float_t> amplitudesFDDC;
+  Float_t energyCommonZNA;
+  Float_t energyCommonZNC;
+  Float_t timeZNA;
+  Float_t timeZNC;
 
   void build(TTree *tree) {
     // fill collision
@@ -177,11 +205,35 @@ struct Collision {
     GetLeafValue(tree, "fRct", rct);
   }
 
-  void buildWithEmcalInfo(TTree *collisionTree, TTree *emcLabelsTree) {
-    // fill collision
-    build(collisionTree);
-    GetLeafValue(emcLabelsTree, "fIsAmbiguous", isEmcalAmbiguous);
-    GetLeafValue(emcLabelsTree, "fIsEMCALReadout", isEmcalReadout);
+  void buildEmcalInfo(TTree *tree) {
+    GetLeafValue(tree, "fIsAmbiguous", isEmcalAmbiguous);
+    GetLeafValue(tree, "fIsEMCALReadout", isEmcalReadout);
+  }
+
+  void buildUpcInfo(TTreeReader *tree,
+                        TTreeReaderArray<Float_t> &amplitudes_fv0,
+                        TTreeReaderArray<Float_t> &amplitudes_ft0a,
+                        TTreeReaderArray<Float_t> &amplitudes_ft0c,
+                        TTreeReaderArray<Float_t> &amplitudes_fdda,
+                        TTreeReaderArray<Float_t> &amplitudes_fddc) {
+    readVectorColumn(amplitudes_fv0, amplitudesFV0);
+    readVectorColumn(amplitudes_ft0a, amplitudesFT0A);
+    readVectorColumn(amplitudes_ft0c, amplitudesFT0C);
+    readVectorColumn(amplitudes_fdda, amplitudesFDDA);
+    readVectorColumn(amplitudes_fddc, amplitudesFDDC);
+    logInfo("Entry: ", tree->GetCurrentEntry());
+    logInfo("b4: ", energyCommonZNA);
+    GetLeafValueReader(tree, "fEnergyCommonZNA", energyCommonZNA);
+    logInfo("after: ", energyCommonZNA);
+    GetLeafValueReader(tree, "fEnergyCommonZNC", energyCommonZNC);
+    GetLeafValueReader(tree, "fTimeZNA", timeZNA);
+    GetLeafValueReader(tree, "fTimeZNC", timeZNC);
+  }
+
+  void readVectorColumn(TTreeReaderArray<Float_t> &reader, std::vector<Float_t> &vector_buffer) {
+    for (std::size_t i = 0; i < reader.GetSize(); ++i) {
+      vector_buffer.push_back(reader[i]);
+    }
   }
 };
 
@@ -196,7 +248,8 @@ public:
 std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
                                TTree *clusters, TTreeReader *clustertracks,
                                TTreeReader *emctracks, TTree *emccollisionlb,
-                               bool saveClusters) {
+                               TTreeReader *collisionsUPC,
+                               bool saveClusters, bool isUPC) {
 
   std::vector<Event> events;
   logDebug("-> Looping over ", collisions->GetEntries(), " collisions");
@@ -208,6 +261,11 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   // map of track index of matched tracks -> track's etaEMCAL, phiEMCAL, momentum
   std::unordered_map<Int_t, std::tuple<Float_t, Float_t, Float_t, Float_t, uint8_t, Float_t, Float_t, Float_t, Float_t>> matchedTrackMap;
   TTreeReaderArray<Int_t> matchedTrackIdxs(*clustertracks, "fIndexArrayJTracks");
+  TTreeReaderArray<Float_t> amplitudes_fv0(*collisionsUPC, "fAmplitudesFV0");
+  TTreeReaderArray<Float_t> amplitudes_ft0a(*collisionsUPC, "fAmplitudesFT0A");
+  TTreeReaderArray<Float_t> amplitudes_ft0c(*collisionsUPC, "fAmplitudesFT0C");
+  TTreeReaderArray<Float_t> amplitudes_fdda(*collisionsUPC, "fAmplitudesFDDA");
+  TTreeReaderArray<Float_t> amplitudes_fddc(*collisionsUPC, "fAmplitudesFDDC");
 
   // loop over all tracks and fill map
   for (int j = 0; j < tracks->GetEntries(); j++) {
@@ -254,14 +312,17 @@ std::vector<Event> buildEvents(TTree *collisions, TTree *bc, TTree *tracks,
   for (int idxCol = 0; idxCol < collisions->GetEntries(); idxCol++) {
     collisions->GetEntry(idxCol);
     if (saveClusters) emccollisionlb->GetEntry(idxCol);
-    Event ev;
+    if (isUPC) collisionsUPC->SetEntry(idxCol);
+    Event ev{};
+    // logInfo(ev.col.energyCommonZNA);
     int idxBC;
     GetLeafValue(collisions, "fIndexJBCs", idxBC);
     bc->GetEntry(idxBC);
     GetLeafValue(bc, "fRunNumber", ev.col.runNumber);
     // build collision info
-    if (saveClusters) ev.col.buildWithEmcalInfo(collisions, emccollisionlb);
-    else ev.col.build(collisions);
+    ev.col.build(collisions);
+    if (saveClusters) ev.col.buildEmcalInfo(emccollisionlb);
+    if (isUPC) ev.col.buildUpcInfo(collisionsUPC, amplitudes_fv0, amplitudes_ft0a, amplitudes_ft0c, amplitudes_fdda, amplitudes_fddc);
 
     // loop through global indices of tracks (idxTrack) for this collision
     for(const int& idxTrack : trackMap[idxCol]) {
