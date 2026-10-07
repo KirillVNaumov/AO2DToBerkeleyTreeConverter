@@ -276,19 +276,20 @@ void Converter::processFileData(TFile *file) {
     if (!cl->InheritsFrom("TDirectory"))
       continue;
     logInfo("   Converting dataframe: ", key->GetName());
-    TDirectory *dir = (TDirectory *)key->ReadObj();
+    std::unique_ptr<TDirectory> dir(key->ReadObject<TDirectory>());
 
-    TTreeReader *O2jclustertrack = nullptr, *O2jemctrack = nullptr;
-    TTree *O2jcluster = nullptr, *O2jemccollisionlb;
+    std::unique_ptr<TTreeReader> O2jclustertrack = nullptr;
+    std::unique_ptr<TTreeReader> O2jemctrack = nullptr;
+    TTree *O2jcluster = nullptr, *O2jemccollisionlb = nullptr;
 
     if (saveClusters) {
       O2jcluster = (TTree *)dir->Get("O2jcluster");
       if (!O2jcluster) throw std::runtime_error("TTree O2jcluster could not be found in file.");
       O2jemccollisionlb = (TTree *)dir->Get("O2jemccollisionlb");
       if (!O2jemccollisionlb) throw std::runtime_error("TTree O2jemccollisionlb could not be found in file.");
-      O2jclustertrack = new TTreeReader("O2jclustertrack", dir);
+      O2jclustertrack = std::make_unique<TTreeReader>("O2jclustertrack", dir.get());
       if (O2jclustertrack->IsInvalid()) throw std::runtime_error("TTree O2jclustertrack could not be found in file.");
-      O2jemctrack = new TTreeReader("O2jemctrack", dir);
+      O2jemctrack = std::make_unique<TTreeReader>("O2jemctrack", dir.get());
       if (O2jemctrack->IsInvalid()) throw std::runtime_error("TTree O2jemctrack could not be found in file.");
     }
 
@@ -301,7 +302,7 @@ void Converter::processFileData(TFile *file) {
 
     // build event
     events =
-        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack, O2jemctrack, O2jemccollisionlb, saveClusters);
+        buildEvents(O2jcollision, O2jbc, O2jtrack, O2jcluster, O2jclustertrack.get(), O2jemctrack.get(), O2jemccollisionlb, saveClusters);
 
     logDebug("Event size: ", events.size());
     totalNumberOfEvents += events.size();
@@ -344,9 +345,9 @@ void Converter::processFilesData(std::vector<TString> filelist) {
   for (size_t i = 0; i < filelist.size(); i++) {
     TString filePath = filelist.at(i);
     logInfo("-> Processing file ", filePath);
-    TFile *in = new TFile(filePath.Data());
+    std::unique_ptr<TFile> in(TFile::Open(filePath.Data(), "READ"));
     if (!in || in->IsZombie()) std::runtime_error("TFile " + filePath + "not found!");
-    processFileData(in);
+    processFileData(in.get());
     in->Close();
   }
   outFile->cd();
